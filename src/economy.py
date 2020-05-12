@@ -1,6 +1,3 @@
-import os, sys
-sys.path.append('.')
-
 import pandas as pd
 import numpy as np
 from numpy.linalg import lstsq
@@ -72,11 +69,17 @@ class Economy(object):
         self.p_eq = None
         self.g_eq = None
 
-    def set_house(self, l, theta, gamma, phi):
+    def init_house(self, l, theta, gamma, phi):
         self.house = Household(l, theta, gamma, phi)
 
-    def set_firms(self, z, sigma, alpha, alpha_p, beta, beta_p, w):
+    def init_firms(self, z, sigma, alpha, alpha_p, beta, beta_p, w):
         self.firms = Firms(z, sigma, alpha, alpha_p, beta, beta_p, w)
+
+    def set_house(self, house):
+        self.house = house
+
+    def set_firms(self, firms):
+        self.firms = firms
 
     def save_eco(self, name):
         first_index = np.concatenate((['Firms' for k in range(11)], ['Household' for k in range(4)]))
@@ -101,7 +104,10 @@ class Economy(object):
                           self.house.phi * np.ones(self.n),
                           ))
 
-        df_eco = pd.DataFrame(vals, index=multi_index, columns=np.arange(1, self.n + 1))
+        df_eco = pd.DataFrame(vals,
+                              index=multi_index,
+                              columns=np.arange(1, self.n + 1)
+                              )
         df_eco.to_hdf(name + '_eco.h5', key='df', mode='w')
         np.save(name + '_network.npy', self.j_a)
         if self.q != 0:
