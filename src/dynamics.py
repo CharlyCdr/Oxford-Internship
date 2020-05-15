@@ -1,5 +1,9 @@
 import numpy as np
 import pandas as pd
+import matplotlib as mpl
+from scipy.signal import find_peaks
+
+import graphics_class as gc
 
 
 class Dynamics(object):
@@ -121,8 +125,10 @@ class Dynamics(object):
         diag = np.diag(
             self.s_vs_d[t, 1:] + offered_cons * (1 - self.b_vs_c[t]) / np.sum(self.Q_demand[t, 1:, 1:], axis=0))
 
-        self.Q_real[t, 1:, 1:] = np.matmul(self.Q_demand[t, 1:, 1:],
-                                           diag)
+        self.Q_real[t, 1:, 1:] = np.clip(np.matmul(self.Q_demand[t, 1:, 1:],
+                                                   diag),
+                                         None,
+                                         self.Q_demand[t, 1:, 1:])
         # print(self.Q_real[t])
         self.tradereal[t] = np.sum(self.Q_real[t], axis=0)
 
@@ -222,3 +228,12 @@ class Dynamics(object):
         if self.store:
             self.dftemp.drop('0')
             self.dftemp.to_hdf(str(self.store) + '_dyn.h5', key='df', mode='w')
+
+    def save_plot(self, dyn_name, k=None, from_eq=False):
+        with mpl.rc_context(rc={'interactive': False}):
+            plotter = gc(self)
+            plotter.plotFirms(from_eq=from_eq, k=k)
+            plotter.plotHousehold()
+
+    def find_crises(self):
+        return len(find_peaks(np.abs(self.prices[1:, 0]), distance=self.t_max//10)[0]) > 1

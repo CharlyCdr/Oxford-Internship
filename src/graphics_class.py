@@ -37,6 +37,7 @@ class PlotDynamics(object):
         self.utility_label = r'$\mathcal{U}(t)$'
         self.wage_label = r'$p_{0}(t)$'
 
+        self.color_firms = np.array(sns.color_palette("deep", 100))
         self.stocks_color = ListedColormap(sns.color_palette("PuBuGn_d", n_colors=100).as_hex())
         self.cons_color = ListedColormap(sns.color_palette("Greens_d", n_colors=100).as_hex())
 
@@ -87,21 +88,24 @@ class PlotDynamics(object):
                 firms = np.arange(self.dyn.n)
                 self.axs_firms[0].set_title(r'Every firms')
 
+            cols = list(zip(self.stocks_color(self.dyn.eco.firms.sigma[firms]),
+                       self.color_firms[firms]))
             if from_eq:
-                self.axs_firms[0].set_ylim(-2 * 10e-5, 2 * 10e-5)
-                self.axs_firms[1].set_ylim(-2 * 10e-5, 2 * 10e-5)
+                #self.axs_firms[0].set_ylim(-2 * 10e-5, 2 * 10e-5)
+                #self.axs_firms[1].set_ylim(-2 * 10e-5, 2 * 10e-5)
 
                 p_eq = self.dyn.eco.p_eq
                 g_eq = self.dyn.eco.g_eq
-                self.axs_firms[0].plot(self.dyn.prices[1:, firms] - p_eq[firms])
-                self.axs_firms[1].plot(self.dyn.prods[1:, firms] - g_eq[firms])
-                for i, col in enumerate(self.stocks_color(self.dyn.eco.firms.sigma[firms])):
-                    self.axs_firms[2].plot(self.dyn.stocks[1:, i], color=col)
+
+                for i, firm_num in enumerate(firms):
+                    self.axs_firms[0].plot(self.dyn.prices[1:, firm_num] - p_eq[firm_num], color=cols[i][1])
+                    self.axs_firms[1].plot(self.dyn.prods[1:, firm_num] - g_eq[firm_num], color=cols[i][1])
+                    self.axs_firms[2].plot(self.dyn.stocks[1:, firm_num], color=cols[i][0])
             else:
-                self.axs_firms[0].plot(self.dyn.prices[1:])
-                self.axs_firms[1].plot(self.dyn.prods[1:])
-                for i, col in enumerate(self.stocks_color(self.dyn.eco.firms.sigma)):
-                    self.axs_firms[2].plot(self.dyn.stocks[1:,i], color=col)
+                for i, firm_num in enumerate(firms):
+                    self.axs_firms[0].plot(self.dyn.prices[1:, firm_num], color=cols[i][1])
+                    self.axs_firms[1].plot(self.dyn.prods[1:, firm_num], color=cols[i][1])
+                    self.axs_firms[2].plot(self.dyn.stocks[1:, firm_num], color=cols[i][0])
 
             self.fig_firms.show()
 
