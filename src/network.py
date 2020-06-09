@@ -59,5 +59,7 @@ def create_net(net_str, directed, n, d):
     else:
         if net_str == 'regular':
             return undir_rrg(d, n)
+        elif net_str == 'er':
+            return er(n, d/n)
         else:
             raise InputError("Not coded yet")

@@ -1,3 +1,6 @@
+import warnings
+warnings.simplefilter("ignore")
+
 import numpy as np
 import pandas as pd
 import matplotlib as mpl
@@ -139,6 +142,7 @@ class Dynamics(object):
                                                    self.supply[t],
                                                    self.demand[t]
                                                    )
+
         self.wages[t] = self.eco.firms.update_wages(self.balance[t, 0], self.tradeflow[t, 0])
         self.utility[t] = self.eco.house.utility(self.Q_real[t, 0, 1:], self.Q_real[t, 1:, 0])
 
@@ -175,7 +179,6 @@ class Dynamics(object):
     def discrete_dynamics(self, p0, w0, g0, t1, s0, B0):
         self.clear_all()
         # Initial conditions at t=0
-
         # Household
         self.wages[0] = w0
         self.budget_res[0] = B0 / w0
