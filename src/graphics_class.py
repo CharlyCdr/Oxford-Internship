@@ -1,28 +1,30 @@
-import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib as mpl
+import matplotlib.pyplot as plt
+import networkx as nx
+import numpy as np
+import plotly.graph_objects as go
+import plotly.io as pio
+import seaborn as sns
+from community import community_louvain
 from matplotlib.colors import ListedColormap
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-import pandas as pd
-import seaborn as sns
-import networkx as nx
-import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+import network
 
-class PlotlyDynamics(object):
+pio.templates.default = "simple_white"
 
-    def __init__(self, dyn):
+
+def herfindal(v):
+    return np.sum(np.abs(v) ** 4)
+
+
+class PlotlyDynamics:
+
+    def __init__(self, dyn, k):
         self.dyn = dyn
+        self.firms = np.random.choice(self.dyn.n, k, replace=False) if k else np.arange(self.dyn.n)
 
-        self.rc = {"text.usetex": True,
-                   "font.family": 'serif',
-                   "font.size": 12,
-                   "axes.grid": True,
-                   "grid.alpha": 0.5,
-                   "axes.xmargin": 0.025,
-                   "axes.ymargin": 0.05,
-                   }
         self.norm_cbar = mpl.colors.Normalize(vmin=0, vmax=1)
 
         self.prices_label = r'$\tilde{p}_{i}(t)$'
@@ -40,14 +42,142 @@ class PlotlyDynamics(object):
 
         self.fig_firms_funda = None
         self.fig_house = None
-        self.fig_network = None
+        self.fig_network_raw = None
+        self.fig_network_eig = None
         self.fig_firms_observ = None
+        self.fig_exchanges = None
+
+    def set_k(self, k):
+        self.firms = np.random.choice(self.dyn.n, k, replace=False) if k else np.arange(self.dyn.n)
+
+    def plotHouse(self, from_eq=False):
+        fig = make_subplots(rows=2, cols=2, shared_xaxes=True, vertical_spacing=0.02
+                            )
+        fig.update_xaxes(title_text=r'$t$', row=2, col=1)
+        fig.update_xaxes(title_text=r'$t$', row=2, col=2)
+
+        fig.update_yaxes(title_text=r'$C_{i}(t)$', row=1, col=1)
+        fig.update_yaxes(title_text=r'$B(t)$', row=2, col=1)
+        fig.update_yaxes(title_text=r'$\mathcal{U}(t)$', row=1, col=2)
+        fig.update_yaxes(title_text=r'$p_{0}(t)$', row=2, col=2)
+        for firm in self.firms:
+            fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
+                                     y=self.dyn.Q_real[1:-1, 0, firm + 1],
+                                     mode='lines'),
+                          row=1, col=1)
+        fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
+                                 y=self.dyn.utility[1:-1],
+                                 mode='lines'),
+                      row=1, col=2)
+        fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
+                                 y=self.dyn.budget[1:-1],
+                                 mode='lines'),
+                      row=2, col=1)
+        fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
+                                 y=self.dyn.wages[1:-1],
+                                 mode='lines'),
+                      row=2, col=2)
+        fig.update_layout(showlegend=False, width=1200, height=850)
+        fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
+        fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey', exponentformat="power", showexponent='last')
+
+        self.fig_house = fig
+
+    def plotNetworkEigenvalues(self):
+
+        fig = make_subplots(rows=2, cols=2, column_widths=[0.7, 0.3], shared_xaxes=True, shared_yaxes=True,
+                            specs=[[{}, None],
+                                   [{}, {}]])
+
+        w, v = np.linalg.eig(self.dyn.eco.m_cal)
+        colors = [herfindal(v[:, k]) for k in range(len(v))]
+        eig_trace = go.Scatter(x=w.real, y=w.imag, mode='markers', marker=dict(
+            showscale=False,
+            colorscale='Reds',
+            reversescale=True,
+            color=[],
+            size=10,
+            line_width=2))
+        eig_trace.marker.color = colors
+        hist_real_trace = go.Histogram(x=w.real, histnorm='probability', nbinsx=50, xaxis="x",
+                                       yaxis="y3", marker_color='#c92b08')
+        hist_imag_trace = go.Histogram(y=w.imag, histnorm='probability', nbinsy=50, xaxis="x2",
+                                       yaxis="y", marker_color='#c92b08')
+
+        data = [eig_trace, hist_imag_trace, hist_real_trace]
+        layout = go.Layout(bargap=0,
+                           bargroupgap=0,
+                           xaxis=dict(title_text=r'$\Re{\mu}$',
+                                      showgrid=True,
+                                      zeroline=True,
+                                      showline=True,
+                                      linewidth=2,
+                                      linecolor='black',
+                                      mirror=True,
+                                      domain=[0, 0.7]
+                                      ),
+                           yaxis=dict(title_text=r'$\Im{\mu}$',
+                                      showgrid=True,
+                                      zeroline=True,
+                                      showline=True,
+                                      linewidth=2,
+                                      linecolor='black',
+                                      mirror=True,
+                                      domain=[0, 0.7]
+                                      ),
+                           xaxis2=dict(showgrid=True,
+                                       showline=True,
+                                       linewidth=1,
+                                       linecolor='black',
+                                       mirror=True,
+                                       domain=[0.725, 1]
+                                       ),
+
+                           yaxis2=dict(showgrid=True,
+                                       showline=True,
+                                       showticklabels=False,
+                                       ticks="",
+                                       linewidth=1,
+                                       linecolor='black',
+                                       mirror=True,
+                                       domain=[0, 0.7],
+
+                                       ),
+                           xaxis3=dict(showgrid=True,
+                                       showline=True,
+                                       showticklabels=False,
+                                       ticks="",
+                                       linewidth=1,
+                                       linecolor='black',
+                                       mirror=True,
+                                       domain=[0, 0.7],
+
+                                       ),
+                           yaxis3=dict(showgrid=True,
+                                       showline=True,
+                                       linewidth=1,
+                                       linecolor='black',
+                                       mirror=True,
+                                       domain=[0.725, 1]
+                                       ),
+                           showlegend=False
+                           )
+
+        fig = go.Figure(data=data, layout=layout)
+        # fig.append_trace(eig_trace, row=2, col=1)
+        # fig.append_trace(hist_imag_trace, row=2, col=2)
+        # fig.append_trace(hist_real_trace, row=1, col=1)
+        self.fig_network_eig = fig
 
     def plotNetwork(self):
         edge_x = []
         edge_y = []
+        edge_width = []
         G = nx.from_numpy_matrix(self.dyn.eco.j)
-        pos = nx.spectral_layout(G)
+
+        partition = community_louvain.best_partition(G)
+        pos = network.community_layout(G, partition)
+        # pos = nx.circular_layout(G)
         for edge in G.edges():
             x0, y0 = pos[edge[0]]
             x1, y1 = pos[edge[1]]
@@ -57,6 +187,7 @@ class PlotlyDynamics(object):
             edge_y.append(y0)
             edge_y.append(y1)
             edge_y.append(None)
+            edge_width.append(self.dyn.eco.j[edge[0], edge[1]])
 
         edge_trace = go.Scatter(
             x=edge_x, y=edge_y,
@@ -83,17 +214,14 @@ class PlotlyDynamics(object):
             hoverinfo='text',
             marker=dict(
                 showscale=True,
-                # colorscale options
-                # 'Greys' | 'YlGnBu' | 'Greens' | 'YlOrRd' | 'Bluered' | 'RdBu' |
-                # 'Reds' | 'Blues' | 'Picnic' | 'Rainbow' | 'Portland' | 'Jet' |
-                # 'Hot' | 'Blackbody' | 'Earth' | 'Electric' | 'Viridis' |
                 colorscale='YlGnBu',
                 reversescale=True,
                 color=[],
                 size=10,
                 colorbar=dict(
+                    x=1.05,
                     thickness=15,
-                    title='Node Connections',
+                    title='z',
                     xanchor='left',
                     titleside='right'
                 ),
@@ -101,51 +229,69 @@ class PlotlyDynamics(object):
 
         node_trace.marker.color = node_z
         node_trace.text = node_text
-        fig = go.Figure(data=[edge_trace, node_trace],
-                        layout=go.Layout(
-                            showlegend=False,
-                            hovermode='closest',
-                            margin=dict(b=20, l=5, r=5, t=40),
-                            annotations=[dict(
-                                showarrow=True,
-                                xref="paper", yref="paper",
-                                x=edge_x, y=edge_y)],
-                            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-                            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False))
-                        )
-        self.fig_network = fig
+        layout = go.Layout(showlegend=False,
+                           hovermode='closest',
+                           margin=dict(b=20, l=5, r=5, t=40),
+                           xaxis=dict(ticks="",
+                                      showgrid=False,
+                                      zeroline=False,
+                                      showticklabels=False,
+                                      showline=True,
+                                      linewidth=2,
+                                      linecolor='black',
+                                      mirror=True),
+                           yaxis=dict(ticks="",
+                                      showgrid=False,
+                                      zeroline=False,
+                                      showticklabels=False,
+                                      showline=True,
+                                      linewidth=2,
+                                      linecolor='black',
+                                      mirror=True))
+        fig = go.Figure(data=[edge_trace, node_trace], layout=layout)
 
-    def stockTrace(self, stocks, firms):
-        cols = list(zip(self.stocks_color(self.dyn.eco.firms.sigma[firms]),
-                        self.color_firms[firms]))
-        trace = go.Figure()
-        for k in firms:
-            trace.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                            y=stocks[1:, k],
-                           mode='lines'))
-        return trace
+        self.fig_network_raw = fig
 
-    def plotFirms(self, from_eq=None, k=None):
-        if k:
-            firms = np.random.choice(self.dyn.n, k, replace=False)
-        else:
-            firms = np.arange(self.dyn.n)
+    def plotFirmsObserv(self):
+        fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02
+                            )
+        fig.update_xaxes(title_text=r'$t$', row=2, col=1)
+        fig.update_yaxes(title_text=r'$\frac{e_{i}(t)}{S_{i}(t)+D_{i}(t)}$', showticksuffix='last', row=1, col=1)
+        fig.update_yaxes(title_text=r'$\frac{\mathcal{P}_{i}(t)}{C^{+}_{i}(t)+C^{-}_{i}(t)}$', row=2, col=1)
+        fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
+                                 y=self.dyn.balance[1:, 0] / self.dyn.tradeflow[1:, 0]
+                                 ,
+                                 mode='lines',
+                                 line=dict(color='black', width=4, dash='dot')),
+                      row=1, col=1)
+        for l in self.firms:
+            fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
+                                     y=self.dyn.balance[1:, l + 1] / self.dyn.tradeflow[1:, l + 1]
+                                     ,
+                                     mode='lines'),
+                          row=1, col=1)
+            fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
+                                     y=self.dyn.profits[1:, l] / self.dyn.cashflow[1:, l],
+                                     mode='lines'),
+                          row=2, col=1)
+        fig.update_layout(showlegend=False)
+        self.fig_firms_observ = fig
 
-        stock_trace = self.stockTrace(self.dyn.stocks, firms)
+    def plotFirms(self, from_eq=None):
         fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.02
                             )
         fig.update_xaxes(title_text=r'$t$', row=3, col=1)
         fig.update_yaxes(title_text=r'$p_{i}(t)$', row=1, col=1)
         fig.update_yaxes(title_text=r'$\gamma_{i}(t)$', row=2, col=1)
         fig.update_yaxes(title_text=r'$s_{i}(t)$', row=3, col=1)
-        for l in firms:
+        for l in self.firms:
             if from_eq:
                 fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                         y=self.dyn.prices[1:, l]-self.dyn.eco.p_eq[l],
+                                         y=self.dyn.prices[1:, l] - self.dyn.eco.p_eq[l],
                                          mode='lines'),
                               row=1, col=1)
                 fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                         y=self.dyn.prods[1:, l]-self.dyn.eco.g_eq[l],
+                                         y=self.dyn.prods[1:, l] - self.dyn.eco.g_eq[l],
                                          mode='lines'),
                               row=2, col=1)
                 fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
@@ -168,8 +314,82 @@ class PlotlyDynamics(object):
         fig.update_layout(showlegend=False)
         self.fig_firms_funda = fig
 
+    def plotExchanges(self):
+        fig_dict = {
+            "data": [dict(type='heatmap',
+                          x=np.arange(1, self.dyn.n + 1),
+                          y=np.arange(1, self.dyn.n + 1),
+                          z=self.dyn.Q_real[1, 1:, 1:],
+                          zmin=0,
+                          colorbar=dict(thickness=20, ticklen=4))],
+            "layout": {'width': 700, 'height': 700},
+            "frames": [dict(data=[dict(type='heatmap',
+                                       z=self.dyn.Q_real[time, 1:, 1:],
+                                       )
+                                  ],
+                            name=str(time),
+                            )
+                       for time in range(1, len(self.dyn.Q_real))]
+        }
+        sliders_dict = {"active": 0,
+                        "yanchor": "top",
+                        "xanchor": "left",
+                        "currentvalue": {"font": {"size": 20},
+                                         "prefix": "Time:",
+                                         "visible": True,
+                                         "xanchor": "right"
+                                         },
+                        "transition": {"duration": 300,
+                                       "easing": "cubic-in-out"},
+                        "pad": {"b": 10, "t": 50},
+                        "len": 0.9,
+                        "x": 0.1,
+                        "y": 0,
+                        "steps": [{"args": [[time],
+                                            {"frame": {"duration": 0,
+                                                       "redraw": False},
+                                             "mode": "immediate",
+                                             "transition": {"duration": 0}}
+                                            ],
+                                   "label": str(time),
+                                   "method": "animate"} for time in range(1, len(self.dyn.Q_real))]
+                        }
 
-class PlotDynamics(object):
+        fig_dict["layout"]["sliders"] = [sliders_dict]
+        fig_dict["layout"]["xaxis"] = {"title": "$j$"}
+        fig_dict["layout"]["yaxis"] = {"title": "$i$"}
+        fig_dict["layout"]["updatemenus"] = [dict(type='buttons',
+                                                  showactive=True,
+                                                  y=1,
+                                                  x=-0.05,
+                                                  xanchor='right',
+                                                  yanchor='top',
+                                                  pad=dict(t=0,
+                                                           r=10),
+                                                  buttons=[dict(label='Play',
+                                                                method='animate',
+                                                                args=[None,
+                                                                      dict(frame=dict(duration=500,
+                                                                                      redraw=True),
+                                                                           transition=dict(duration=300),
+                                                                           fromcurrent=True,
+                                                                           mode='immediate')]),
+                                                           {
+                                                               "args": [[None],
+                                                                        {"frame": {"duration": 0,
+                                                                                   "redraw": False},
+                                                                         "mode": "immediate",
+                                                                         "transition": {"duration": 0}}],
+                                                               "label": "Pause",
+                                                               "method": "animate"
+                                                           }]
+                                                  )
+                                             ]
+
+        self.fig_exchanges = go.Figure(fig_dict)
+
+
+class PlotDynamics:
 
     def __init__(self, dyn):
         self.dyn = dyn

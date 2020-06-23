@@ -1,12 +1,11 @@
 import warnings
+
 warnings.simplefilter("ignore")
 
+
+from scipy.signal import find_peaks
 import numpy as np
 import pandas as pd
-import matplotlib as mpl
-from scipy.signal import find_peaks
-
-import graphics_class as gc
 
 
 class Dynamics(object):
@@ -232,11 +231,5 @@ class Dynamics(object):
             self.dftemp.drop('0')
             self.dftemp.to_hdf(str(self.store) + '_dyn.h5', key='df', mode='w')
 
-    def save_plot(self, dyn_name, k=None, from_eq=False):
-        with mpl.rc_context(rc={'interactive': False}):
-            plotter = gc(self)
-            plotter.plotFirms(from_eq=from_eq, k=k)
-            plotter.plotHousehold()
-
     def find_crises(self):
-        return len(find_peaks(np.abs(self.prices[1:, 0]), distance=self.t_max//10)[0]) > 1
+        return len(find_peaks(np.abs(self.prices[1:, 0]), distance=self.t_max // 10)[0]) > 1
