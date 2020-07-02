@@ -2,10 +2,7 @@ import warnings
 
 warnings.simplefilter("ignore")
 
-
-from scipy.signal import find_peaks
 import numpy as np
-import pandas as pd
 
 
 class Dynamics(object):
@@ -38,16 +35,6 @@ class Dynamics(object):
         self.labour = np.zeros(t_max + 1)
 
         self.store = store
-        self.dftemp = None
-        if self.store:
-            stored_funda = ['Wage/Prices', 'Labour/Productions', 'Budget/Stocks', 'Mu/Targets', 'Cons', 'Demand']
-            first_index = np.array([[str(t) for k in range(len(stored_funda))] for t in range(self.t_max)]) \
-                .reshape(len(stored_funda) * self.t_max)
-            second_index = np.array([stored_funda for t in range(self.t_max)]) \
-                .reshape(len(stored_funda) * self.t_max)
-            multi_index = [first_index, second_index]
-
-            self.dftemp = pd.DataFrame(np.zeros((len(stored_funda) * self.t_max, self.n + 1)), index=multi_index)
 
     def clear_all(self):
         self.prices = np.zeros((self.t_max + 1, self.n))
@@ -206,30 +193,10 @@ class Dynamics(object):
 
         self.time_t(1)
         self.time_t_plus(1)
-        if self.store:
-            self.dftemp.loc[str(1), 'Wage/Prices'] = np.concatenate(([self.wages[1]], self.prices[1]))
-            self.dftemp.loc[str(1), 'Labour/Productions'] = np.concatenate(([self.labour[1]], self.prods[1]))
-            self.dftemp.loc[str(1), 'Budget/Stocks'] = np.concatenate(([self.budget_res[1]], self.stocks[1]))
-            self.dftemp.loc[str(1), 'Mu/Targets'] = np.concatenate(([self.mu[1]], self.targets[1]))
-            self.dftemp.loc[str(1), 'Cons'] = np.concatenate(([np.nan], self.Q_real[1, 0, 1:]))
-            self.dftemp.loc[str(1), 'Demand'] = self.demand[1]
         t = 2
         while t < self.t_max:
             # print(t)
             self.time_t_minus(t)
             self.time_t(t)
             self.time_t_plus(t)
-            if self.store:
-                self.dftemp.loc[str(t), 'Wage/Prices'] = np.concatenate(([self.wages[t]], self.prices[t]))
-                self.dftemp.loc[str(t), 'Labour/Productions'] = np.concatenate(([self.labour[t]], self.prods[t]))
-                self.dftemp.loc[str(t), 'Budget/Stocks'] = np.concatenate(([self.budget_res[t]], self.stocks[t]))
-                self.dftemp.loc[str(t), 'Mu/Targets'] = np.concatenate(([self.mu[t]], self.targets[t]))
-                self.dftemp.loc[str(t), 'Cons'] = np.concatenate(([np.nan], self.Q_real[t, 0, 1:]))
-                self.dftemp.loc[str(t), 'Demand'] = self.demand[t]
             t += 1
-        if self.store:
-            self.dftemp.drop('0')
-            self.dftemp.to_hdf(str(self.store) + '_dyn.h5', key='df', mode='w')
-
-    def find_crises(self):
-        return len(find_peaks(np.abs(self.prices[1:, 0]), distance=self.t_max // 10)[0]) > 1

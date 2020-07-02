@@ -1,7 +1,17 @@
-from exception import *
-
+import numba
 import numpy as np
 
+from exception import *
+
+spec = [
+    ('z', numba.float32[:]),
+    ('sigma', numba.float32[:]),
+    ('alpha', numba.float32),
+    ('alpha_p', numba.float32),
+    ('beta', numba.float32),
+    ('beta_p', numba.float32),
+    ('w', numba.float32)
+]
 
 class Firms(object):
     def __init__(self, z, sigma, alpha, alpha_p, beta, beta_p, w):
@@ -52,7 +62,21 @@ class Firms(object):
         """
         return 1 - self.w * labour_balance / total_labour
 
+    def compute_targets(self, prices, Q_demand_prev, supply, prods):
+        """
+        Computes the production target based on profit and balance forecasts.
+        :param prices: current rescaled prices
+        :param Q_demand_prev: (n+1, n+1) matrix of goods and labour demands of previous period along with consumption demands
+        :param supply: current supply
+        :param prods: current production levels
+        :return: Production targets for the next period
+        """
+        est_profits, est_balance, est_cashflow, est_tradeflow = self.compute_forecasts(prices, Q_demand_prev, supply)
+        return prods * (
+                1 + self.beta * (est_profits / est_cashflow) - self.beta_p * (est_balance[1:] / est_tradeflow[1:]))
+
     @staticmethod
+    @numba.jit
     def compute_forecasts(prices, Q_demand_prev, supply):
         """
         Computes the expected profits and balances assuming same demands as previous time
@@ -68,20 +92,10 @@ class Firms(object):
         exp_demand = np.sum(Q_demand_prev, axis=0)
         return exp_gain - exp_losses, exp_supply - exp_demand, exp_gain + exp_losses, exp_supply + exp_demand
 
-    def compute_targets(self, prices, Q_demand_prev, supply, prods):
-        """
-        Computes the production target based on profit and balance forecasts.
-        :param prices: current rescaled prices
-        :param Q_demand_prev: (n+1, n+1) matrix of goods and labour demands of previous period along with consumption demands
-        :param supply: current supply
-        :param prods: current production levels
-        :return: Production targets for the next period
-        """
-        est_profits, est_balance, est_cashflow, est_tradeflow = self.compute_forecasts(prices, Q_demand_prev, supply)
-        return prods * (
-                    1 + self.beta * (est_profits / est_cashflow) - self.beta_p * (est_balance[1:] / est_tradeflow[1:]))
+
 
     @staticmethod
+    @numba.jit
     def compute_demands_firms(targets, prices, prices_net, q, b, lamb_a):
         """
         Computes
@@ -105,6 +119,7 @@ class Firms(object):
         return demanded_products_labor
 
     @staticmethod
+    @numba.jit
     def compute_profits_balance(prices, Q, supply, demand):
         """
         Compute the real profits and balances of firms
@@ -118,4 +133,3 @@ class Firms(object):
         losses = np.matmul(Q[1:, :], np.concatenate(([1], prices)))
 
         return gain - losses, supply - demand, gain + losses, supply + demand
-

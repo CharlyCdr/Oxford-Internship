@@ -36,7 +36,8 @@ class PlotlyDynamics:
         self.utility_label = r'$\mathcal{U}(t)$'
         self.wage_label = r'$p_{0}(t)$'
 
-        self.color_firms = np.array(sns.color_palette("deep", self.dyn.n))
+        cmap = mpl.cm.get_cmap('Spectral')
+        self.color_firms = np.array([cmap((self.dyn.n - i) / self.dyn.n) for i in range(self.dyn.n)])
         self.stocks_color = ListedColormap(sns.color_palette("PuBuGn_d", n_colors=100).as_hex())
         self.cons_color = ListedColormap(sns.color_palette("Greens_d", n_colors=100).as_hex())
 
@@ -63,7 +64,10 @@ class PlotlyDynamics:
         for firm in self.firms:
             fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
                                      y=self.dyn.Q_real[1:-1, 0, firm + 1],
-                                     mode='lines'),
+                                     mode='lines',
+                                     marker=dict(
+                                         color='rgba' + str(tuple(self.color_firms[firm])))
+                                     ),
                           row=1, col=1)
         fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
                                  y=self.dyn.utility[1:-1],
@@ -77,7 +81,7 @@ class PlotlyDynamics:
                                  y=self.dyn.wages[1:-1],
                                  mode='lines'),
                       row=2, col=2)
-        fig.update_layout(showlegend=False, width=1200, height=850)
+        fig.update_layout(showlegend=False)
         fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
         fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey', exponentformat="power", showexponent='last')
 
@@ -91,7 +95,7 @@ class PlotlyDynamics:
 
         w, v = np.linalg.eig(self.dyn.eco.m_cal)
         colors = [herfindal(v[:, k]) for k in range(len(v))]
-        eig_trace = go.Scatter(x=w.real, y=w.imag, mode='markers', marker=dict(
+        eig_trace = go.Scattergl(x=w.real, y=w.imag, mode='markers', marker=dict(
             showscale=False,
             colorscale='Reds',
             reversescale=True,
@@ -189,7 +193,7 @@ class PlotlyDynamics:
             edge_y.append(None)
             edge_width.append(self.dyn.eco.j[edge[0], edge[1]])
 
-        edge_trace = go.Scatter(
+        edge_trace = go.Scattergl(
             x=edge_x, y=edge_y,
             line=dict(width=0.5, color='#888'),
             hoverinfo='none',
@@ -208,7 +212,7 @@ class PlotlyDynamics:
             node_z.append(self.dyn.eco.firms.z[node])
             node_text.append('Productivity factor: ' + str(self.dyn.eco.firms.z[node]))
 
-        node_trace = go.Scatter(
+        node_trace = go.Scattergl(
             x=node_x, y=node_y,
             mode='markers',
             hoverinfo='text',
@@ -265,16 +269,24 @@ class PlotlyDynamics:
                                  line=dict(color='black', width=4, dash='dot')),
                       row=1, col=1)
         for l in self.firms:
-            fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                     y=self.dyn.balance[1:, l + 1] / self.dyn.tradeflow[1:, l + 1]
-                                     ,
-                                     mode='lines'),
+            fig.add_trace(go.Scattergl(x=np.arange(self.dyn.t_max),
+                                       y=self.dyn.balance[1:, l + 1] / self.dyn.tradeflow[1:, l + 1]
+                                       ,
+                                       mode='lines',
+                                       marker=dict(
+                                           color='rgba' + str(tuple(self.color_firms[l])))
+                                       ),
                           row=1, col=1)
-            fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                     y=self.dyn.profits[1:, l] / self.dyn.cashflow[1:, l],
-                                     mode='lines'),
+            fig.add_trace(go.Scattergl(x=np.arange(self.dyn.t_max),
+                                       y=self.dyn.profits[1:, l] / self.dyn.cashflow[1:, l],
+                                       mode='lines',
+                                       marker=dict(
+                                           color='rgba' + str(tuple(self.color_firms[l])))
+                                       ),
                           row=2, col=1)
         fig.update_layout(showlegend=False)
+        fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
+        fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey', exponentformat="power", showexponent='last')
         self.fig_firms_observ = fig
 
     def plotFirms(self, from_eq=None):
@@ -286,44 +298,61 @@ class PlotlyDynamics:
         fig.update_yaxes(title_text=r'$s_{i}(t)$', row=3, col=1)
         for l in self.firms:
             if from_eq:
-                fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                         y=self.dyn.prices[1:, l] - self.dyn.eco.p_eq[l],
-                                         mode='lines'),
+                fig.add_trace(go.Scattergl(x=np.arange(self.dyn.t_max),
+                                           y=self.dyn.prices[1:, l] - self.dyn.eco.p_eq[l],
+                                           mode='lines',
+                                           marker=dict(
+                                               color='rgba' + str(tuple(self.color_firms[l])))),
                               row=1, col=1)
-                fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                         y=self.dyn.prods[1:, l] - self.dyn.eco.g_eq[l],
-                                         mode='lines'),
+                fig.add_trace(go.Scattergl(x=np.arange(self.dyn.t_max),
+                                           y=self.dyn.prods[1:, l] - self.dyn.eco.g_eq[l],
+                                           mode='lines',
+                                           marker=dict(
+                                               color='rgba' + str(tuple(self.color_firms[l])))),
                               row=2, col=1)
-                fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                         y=self.dyn.stocks[1:, l],
-                                         mode='lines'),
+                fig.add_trace(go.Scattergl(x=np.arange(self.dyn.t_max),
+                                           y=self.dyn.stocks[1:, l],
+                                           mode='lines',
+                                           marker=dict(
+                                               color='rgba' + str(tuple(self.color_firms[l])))),
                               row=3, col=1)
             else:
-                fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                         y=self.dyn.prices[1:, l],
-                                         mode='lines'),
+                fig.add_trace(go.Scattergl(x=np.arange(self.dyn.t_max),
+                                           y=self.dyn.prices[1:, l],
+                                           mode='lines',
+                                           marker=dict(
+                                               color='rgba' + str(tuple(self.color_firms[l])))
+                                           ),
                               row=1, col=1)
-                fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                         y=self.dyn.prods[1:, l],
-                                         mode='lines'),
+                fig.add_trace(go.Scattergl(x=np.arange(self.dyn.t_max),
+                                           y=self.dyn.prods[1:, l],
+                                           mode='lines',
+                                           marker=dict(
+                                               color='rgba' + str(tuple(self.color_firms[l])))
+                                           ),
                               row=2, col=1)
-                fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                         y=self.dyn.stocks[1:, l],
-                                         mode='lines'),
+                fig.add_trace(go.Scattergl(x=np.arange(self.dyn.t_max),
+                                           y=self.dyn.stocks[1:, l],
+                                           mode='lines',
+                                           marker=dict(
+                                               color='rgba' + str(tuple(self.color_firms[l])))
+                                           ),
                               row=3, col=1)
         fig.update_layout(showlegend=False)
+        fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
+        fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey', exponentformat="power", showexponent='last')
         self.fig_firms_funda = fig
 
     def plotExchanges(self):
         fig_dict = {
-            "data": [dict(type='heatmap',
+            "data": [dict(type='heatmapgl',
                           x=np.arange(1, self.dyn.n + 1),
                           y=np.arange(1, self.dyn.n + 1),
                           z=self.dyn.Q_real[1, 1:, 1:],
                           zmin=0,
                           colorbar=dict(thickness=20, ticklen=4))],
             "layout": {'width': 700, 'height': 700},
-            "frames": [dict(data=[dict(type='heatmap',
+            "frames": [dict(data=[dict(type='heatmapgl',
                                        z=self.dyn.Q_real[time, 1:, 1:],
                                        )
                                   ],
