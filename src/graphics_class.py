@@ -269,7 +269,7 @@ class PlotlyDynamics:
                                  line=dict(color='black', width=4, dash='dot')),
                       row=1, col=1)
         for l in self.firms:
-            fig.add_trace(go.Scattergl(x=np.arange(self.dyn.t_max),
+            fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
                                        y=self.dyn.balance[1:, l + 1] / self.dyn.tradeflow[1:, l + 1]
                                        ,
                                        mode='lines',
@@ -277,7 +277,7 @@ class PlotlyDynamics:
                                            color='rgba' + str(tuple(self.color_firms[l])))
                                        ),
                           row=1, col=1)
-            fig.add_trace(go.Scattergl(x=np.arange(self.dyn.t_max),
+            fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
                                        y=self.dyn.profits[1:, l] / self.dyn.cashflow[1:, l],
                                        mode='lines',
                                        marker=dict(
@@ -298,19 +298,19 @@ class PlotlyDynamics:
         fig.update_yaxes(title_text=r'$s_{i}(t)$', row=3, col=1)
         for l in self.firms:
             if from_eq:
-                fig.add_trace(go.Scattergl(x=np.arange(self.dyn.t_max),
+                fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
                                            y=self.dyn.prices[1:, l] - self.dyn.eco.p_eq[l],
                                            mode='lines',
                                            marker=dict(
                                                color='rgba' + str(tuple(self.color_firms[l])))),
                               row=1, col=1)
-                fig.add_trace(go.Scattergl(x=np.arange(self.dyn.t_max),
+                fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
                                            y=self.dyn.prods[1:, l] - self.dyn.eco.g_eq[l],
                                            mode='lines',
                                            marker=dict(
                                                color='rgba' + str(tuple(self.color_firms[l])))),
                               row=2, col=1)
-                fig.add_trace(go.Scattergl(x=np.arange(self.dyn.t_max),
+                fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
                                            y=self.dyn.stocks[1:, l],
                                            mode='lines',
                                            marker=dict(
@@ -324,14 +324,14 @@ class PlotlyDynamics:
                                                color='rgba' + str(tuple(self.color_firms[l])))
                                            ),
                               row=1, col=1)
-                fig.add_trace(go.Scattergl(x=np.arange(self.dyn.t_max),
+                fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
                                            y=self.dyn.prods[1:, l],
                                            mode='lines',
                                            marker=dict(
                                                color='rgba' + str(tuple(self.color_firms[l])))
                                            ),
                               row=2, col=1)
-                fig.add_trace(go.Scattergl(x=np.arange(self.dyn.t_max),
+                fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
                                            y=self.dyn.stocks[1:, l],
                                            mode='lines',
                                            marker=dict(
