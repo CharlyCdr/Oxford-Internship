@@ -13,6 +13,10 @@ from plotly.subplots import make_subplots
 import network
 
 pio.templates.default = "simple_white"
+mpl.rcParams['mathtext.fontset'] = 'stix'
+mpl.rcParams['font.family'] = 'serif'
+mpl.rcParams['font.serif'] = 'cm'
+mpl.use('Agg')
 
 
 def herfindal(v):
@@ -27,7 +31,7 @@ class PlotlyDynamics:
 
         self.norm_cbar = mpl.colors.Normalize(vmin=0, vmax=1)
 
-        self.prices_label = r'$\tilde{p}_{i}(t)$'
+        self.prices_label = r'$p_{i}(t)$'
         self.prods_label = r'$\gamma_{i}(t)$'
         self.stocks_label = r'$s_{i}(t)$'
 
@@ -36,8 +40,8 @@ class PlotlyDynamics:
         self.utility_label = r'$\mathcal{U}(t)$'
         self.wage_label = r'$p_{0}(t)$'
 
-        cmap = mpl.cm.get_cmap('Spectral')
-        self.color_firms = np.array([cmap((self.dyn.n - i) / self.dyn.n) for i in range(self.dyn.n)])
+        cmap = mpl.cm.get_cmap('jet')
+        self.color_firms = np.array([cmap(i / self.dyn.n) for i in range(self.dyn.n)])
         self.stocks_color = ListedColormap(sns.color_palette("PuBuGn_d", n_colors=100).as_hex())
         self.cons_color = ListedColormap(sns.color_palette("Greens_d", n_colors=100).as_hex())
 
@@ -47,6 +51,15 @@ class PlotlyDynamics:
         self.fig_network_eig = None
         self.fig_firms_observ = None
         self.fig_exchanges = None
+
+        self.rc = {"text.usetex": True,
+                   "font.family": 'serif',
+                   "font.size": 12,
+                   "axes.grid": True,
+                   "grid.alpha": 0.5,
+                   "axes.xmargin": 0.025,
+                   "axes.ymargin": 0.05
+                   }
 
     def set_k(self, k):
         self.firms = np.random.choice(self.dyn.n, k, replace=False) if k else np.arange(self.dyn.n)
@@ -270,19 +283,19 @@ class PlotlyDynamics:
                       row=1, col=1)
         for l in self.firms:
             fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                       y=self.dyn.balance[1:, l + 1] / self.dyn.tradeflow[1:, l + 1]
-                                       ,
-                                       mode='lines',
-                                       marker=dict(
-                                           color='rgba' + str(tuple(self.color_firms[l])))
-                                       ),
+                                     y=self.dyn.balance[1:, l + 1] / self.dyn.tradeflow[1:, l + 1]
+                                     ,
+                                     mode='lines',
+                                     marker=dict(
+                                         color='rgba' + str(tuple(self.color_firms[l])))
+                                     ),
                           row=1, col=1)
             fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                       y=self.dyn.profits[1:, l] / self.dyn.cashflow[1:, l],
-                                       mode='lines',
-                                       marker=dict(
-                                           color='rgba' + str(tuple(self.color_firms[l])))
-                                       ),
+                                     y=self.dyn.profits[1:, l] / self.dyn.cashflow[1:, l],
+                                     mode='lines',
+                                     marker=dict(
+                                         color='rgba' + str(tuple(self.color_firms[l])))
+                                     ),
                           row=2, col=1)
         fig.update_layout(showlegend=False)
         fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
@@ -299,22 +312,22 @@ class PlotlyDynamics:
         for l in self.firms:
             if from_eq:
                 fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                           y=self.dyn.prices[1:, l] - self.dyn.eco.p_eq[l],
-                                           mode='lines',
-                                           marker=dict(
-                                               color='rgba' + str(tuple(self.color_firms[l])))),
+                                         y=self.dyn.prices[1:, l] - self.dyn.eco.p_eq[l],
+                                         mode='lines',
+                                         marker=dict(
+                                             color='rgba' + str(tuple(self.color_firms[l])))),
                               row=1, col=1)
                 fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                           y=self.dyn.prods[1:, l] - self.dyn.eco.g_eq[l],
-                                           mode='lines',
-                                           marker=dict(
-                                               color='rgba' + str(tuple(self.color_firms[l])))),
+                                         y=self.dyn.prods[1:, l] - self.dyn.eco.g_eq[l],
+                                         mode='lines',
+                                         marker=dict(
+                                             color='rgba' + str(tuple(self.color_firms[l])))),
                               row=2, col=1)
                 fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                           y=self.dyn.stocks[1:, l],
-                                           mode='lines',
-                                           marker=dict(
-                                               color='rgba' + str(tuple(self.color_firms[l])))),
+                                         y=self.dyn.stocks[1:, l],
+                                         mode='lines',
+                                         marker=dict(
+                                             color='rgba' + str(tuple(self.color_firms[l])))),
                               row=3, col=1)
             else:
                 fig.add_trace(go.Scattergl(x=np.arange(self.dyn.t_max),
@@ -325,18 +338,18 @@ class PlotlyDynamics:
                                            ),
                               row=1, col=1)
                 fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                           y=self.dyn.prods[1:, l],
-                                           mode='lines',
-                                           marker=dict(
-                                               color='rgba' + str(tuple(self.color_firms[l])))
-                                           ),
+                                         y=self.dyn.prods[1:, l],
+                                         mode='lines',
+                                         marker=dict(
+                                             color='rgba' + str(tuple(self.color_firms[l])))
+                                         ),
                               row=2, col=1)
                 fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                           y=self.dyn.stocks[1:, l],
-                                           mode='lines',
-                                           marker=dict(
-                                               color='rgba' + str(tuple(self.color_firms[l])))
-                                           ),
+                                         y=self.dyn.stocks[1:, l],
+                                         mode='lines',
+                                         marker=dict(
+                                             color='rgba' + str(tuple(self.color_firms[l])))
+                                         ),
                               row=3, col=1)
         fig.update_layout(showlegend=False)
         fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
@@ -416,6 +429,72 @@ class PlotlyDynamics:
                                              ]
 
         self.fig_exchanges = go.Figure(fig_dict)
+
+    def saveMatplotlib(self, savepath, from_eq=False, log=False):
+        with plt.rc_context(rc=self.rc):
+            if from_eq:
+                for data, label, savelabel, eq in zip([self.dyn.prices[1:, :], self.dyn.prods[1:, :], self.dyn.stocks[1:, :],
+                                                       self.dyn.balance[1:, 1:] / self.dyn.tradeflow[1:, 1:],
+                                                       self.dyn.profits[1:, :] / self.dyn.cashflow[1:, :],
+                                                       self.dyn.utility[1:-1], self.dyn.budget[1:-1],
+                                                       self.dyn.wages[1:-1], self.dyn.Q_real[1:-1, 0, 1:],
+                                                       np.sum(self.dyn.eco.firms.z * self.dyn.prices[1:, :] * self.dyn.prods[1:, :], axis=1)],
+                                                      [self.prices_label+r'$-p_{eq,i}', self.prods_label+r'$-\gamma_{eq,i}',
+                                                       self.stocks_label+r'$-s_{eq,i}',
+                                                       r'$\frac{\mathcal{E}_{i}(t)}{\mathcal{S}_{i}(t)+\mathcal{D}_{i}(t)}$',
+                                                       r'$\frac{\mathcal{P}_{i}(t)}{\mathcal{C}^+_{i}(t)+\mathcal{C}^-(t)}$',
+                                                       r'$\mathcal{U}(t)$', r'$B(t)$', r'$p_0(t)$', r'$C_i(t)$',
+                                                       r'$\sum_j z_j p_j(t) \gamma_j(t)$'],
+                                                      ['prices', 'prods', 'stocks', 'n_surplus', 'n_profits', 'utility',
+                                                       'budget', 'wages', 'cons', 'pib'],
+                                                      [self.dyn.eco.p_eq, self.dyn.eco.g_eq, np.zeros(self.dyn.n),
+                                                       np.zeros(self.dyn.n), np.zeros(self.dyn.n), 0, 0, 1, np.zeros(self.dyn.n),
+                                                       np.sum(self.dyn.eco.firms.z * self.dyn.eco.p_eq * self.dyn.eco.g_eq)]):
+                    f_tmp, ax = plt.subplots(figsize=(5, 3))
+                    ax.ticklabel_format(axis='y', scilimits=(-1, 1))
+                    if log:
+                        ax.set_yscale('log')
+                    ax.set_xlabel(r'$t$')
+                    ax.set_ylabel(label)
+                    try:
+                        for l in self.firms:
+                            plt.plot(np.arange(self.dyn.t_max), data[:, l] - eq[l], color=self.color_firms[l])
+                    except Exception as e:
+                        try:
+                            plt.plot(np.arange(self.dyn.t_max - 1), data - eq)
+                        except Exception as e2:
+                            plt.plot(np.arange(self.dyn.t_max), data - eq)
+                    plt.tight_layout()
+                    f_tmp.savefig(savepath + '/' + savelabel + '.png', dpi=200)
+            else:
+                for data, label, savelabel in zip([self.dyn.prices[1:, :], self.dyn.prods[1:, :], self.dyn.stocks[1:, :],
+                                                   self.dyn.balance[1:, 1:] / self.dyn.tradeflow[1:, 1:],
+                                                   self.dyn.profits[1:, :] / self.dyn.cashflow[1:, :],
+                                                   self.dyn.utility[1:-1], self.dyn.budget[1:-1], self.dyn.wages[1:-1],
+                                                   self.dyn.Q_real[1:-1, 0, 1:],
+                                                   np.sum(self.dyn.eco.firms.z * self.dyn.prices[1:] * self.dyn.prods[1:], axis=1)],
+                                                  [self.prices_label, self.prods_label, self.stocks_label,
+                                                   r'$\frac{\mathcal{E}_{i}(t)}{\mathcal{S}_{i}(t)+\mathcal{D}_{i}(t)}$',
+                                                   r'$\frac{\mathcal{P}_{i}(t)}{\mathcal{C}^{+}_{i}(t)+\mathcal{C}^{-}_{i}(t)}$',
+                                                   r'$\mathcal{U}(t)$', r'$B(t)$', r'$p_0(t)$', r'$C_i(t)$', r'$\sum_j z_j p_j(t) \gamma_j(t)$'],
+                                                  ['prices', 'prods', 'stocks', 'n_surplus', 'n_profits', 'utility',
+                                                   'budget', 'wages', 'cons', 'pib']):
+                    f_tmp, ax = plt.subplots(figsize=(5, 3))
+                    ax.ticklabel_format(axis='y', scilimits=(-1, 1))
+                    if log:
+                        ax.set_yscale('log')
+                    ax.set_xlabel(r'$t$')
+                    ax.set_ylabel(label)
+                    try:
+                        for l in self.firms:
+                            plt.plot(np.arange(self.dyn.t_max), data[:, l], color=self.color_firms[l])
+                    except Exception as e:
+                        try:
+                            plt.plot(np.arange(self.dyn.t_max - 1), data)
+                        except Exception as e2:
+                            plt.plot(np.arange(self.dyn.t_max), data)
+                    plt.tight_layout()
+                    f_tmp.savefig(savepath + '/' + savelabel + '.png', dpi=200)
 
 
 class PlotDynamics:
