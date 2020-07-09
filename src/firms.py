@@ -13,6 +13,7 @@ spec = [
     ('w', numba.float32)
 ]
 
+
 class Firms(object):
     def __init__(self, z, sigma, alpha, alpha_p, beta, beta_p, w):
 
@@ -92,11 +93,9 @@ class Firms(object):
         exp_demand = np.sum(Q_demand_prev, axis=0)
         return exp_gain - exp_losses, exp_supply - exp_demand, exp_gain + exp_losses, exp_supply + exp_demand
 
-
-
     @staticmethod
     @numba.jit
-    def compute_demands_firms(targets, prices, prices_net, q, b, lamb_a):
+    def compute_demands_firms(targets, prices, prices_net, q, b, lamb_a, n):
         """
         Computes
         :param targets: production targets for the next period
@@ -110,6 +109,14 @@ class Firms(object):
         if q == 0:
             demanded_products_labor = np.matmul(np.diag(np.power(targets, 1. / b)),
                                                 lamb_a)
+        elif q == np.inf:
+            prices_net_aux = np.array(
+                [np.prod(np.power(np.concatenate(([1], prices)), lamb_a[i, :])) for i in range(n)])
+            demanded_products_labor = np.multiply(lamb_a,
+                                                  np.outer(np.multiply(prices_net_aux,
+                                                                       np.power(targets, 1. / b)),
+                                                           np.concatenate(([1], prices)),
+                                                           ))
         else:
             demanded_products_labor = np.multiply(lamb_a,
                                                   np.outer(np.multiply(np.power(prices_net, q),

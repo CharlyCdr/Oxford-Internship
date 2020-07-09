@@ -439,8 +439,8 @@ class PlotlyDynamics:
                                                        self.dyn.utility[1:-1], self.dyn.budget[1:-1],
                                                        self.dyn.wages[1:-1], self.dyn.Q_real[1:-1, 0, 1:],
                                                        np.sum(self.dyn.eco.firms.z * self.dyn.prices[1:, :] * self.dyn.prods[1:, :], axis=1)],
-                                                      [self.prices_label+r'$-p_{eq,i}', self.prods_label+r'$-\gamma_{eq,i}',
-                                                       self.stocks_label+r'$-s_{eq,i}',
+                                                      [r'$p_i(t)-p_{eq,i}$', r'$\gamma_i(t)-\gamma_{eq,i}$',
+                                                       r'$s_i(t)-s_{eq,i}$',
                                                        r'$\frac{\mathcal{E}_{i}(t)}{\mathcal{S}_{i}(t)+\mathcal{D}_{i}(t)}$',
                                                        r'$\frac{\mathcal{P}_{i}(t)}{\mathcal{C}^+_{i}(t)+\mathcal{C}^-(t)}$',
                                                        r'$\mathcal{U}(t)$', r'$B(t)$', r'$p_0(t)$', r'$C_i(t)$',
@@ -452,7 +452,7 @@ class PlotlyDynamics:
                                                        np.sum(self.dyn.eco.firms.z * self.dyn.eco.p_eq * self.dyn.eco.g_eq)]):
                     f_tmp, ax = plt.subplots(figsize=(5, 3))
                     ax.ticklabel_format(axis='y', scilimits=(-1, 1))
-                    if log:
+                    if log and not(label in ['n_surplus', 'n_profits', 'utility']):
                         ax.set_yscale('log')
                     ax.set_xlabel(r'$t$')
                     ax.set_ylabel(label)
@@ -481,7 +481,7 @@ class PlotlyDynamics:
                                                    'budget', 'wages', 'cons', 'pib']):
                     f_tmp, ax = plt.subplots(figsize=(5, 3))
                     ax.ticklabel_format(axis='y', scilimits=(-1, 1))
-                    if log:
+                    if log and not(label in ['n_surplus', 'n_profits', 'utility']):
                         ax.set_yscale('log')
                     ax.set_xlabel(r'$t$')
                     ax.set_ylabel(label)
@@ -492,7 +492,7 @@ class PlotlyDynamics:
                         try:
                             plt.plot(np.arange(self.dyn.t_max - 1), data)
                         except Exception as e2:
-                            plt.plot(np.arange(self.dyn.t_max), data)
+                            plt.plot(np.arange(1, self.dyn.t_max), data[1:])
                     plt.tight_layout()
                     f_tmp.savefig(savepath + '/' + savelabel + '.png', dpi=200)
 

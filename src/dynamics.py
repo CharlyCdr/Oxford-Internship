@@ -83,6 +83,7 @@ class Dynamics(object):
                                                                     self.eco.q,
                                                                     self.eco.b,
                                                                     self.eco.lamb_a,
+                                                                    self.n
                                                                     )
 
     def time_t(self, t):

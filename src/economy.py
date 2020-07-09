@@ -217,6 +217,12 @@ class Economy:
             self.lamb_a = self.j_a
             self.m_cal = np.diag(self.firms.z) - self.lamb
             self.v = np.array(self.lamb_a[:, 0])
+        elif self.q == np.inf:
+            self.lamb = self.a
+            self.a_a, self.j_a = np.hstack((np.array([self.a0]).T, self.a)), np.hstack((np.array([self.j0]).T, self.j))
+            self.lamb_a = self.a_a
+            self.m_cal = np.eye(self.n) - self.lamb
+            self.v = np.array(self.lamb_a[:, 0])
         else:
             self.lamb = np.multiply(np.power(self.a, self.q * self.zeta), np.power(self.j, self.zeta))
             self.a_a, self.j_a = np.hstack((np.array([self.a0]).T, self.a)), np.hstack((np.array([self.j0]).T, self.j))
@@ -256,10 +262,12 @@ class Economy:
         """
         if self.q == 0:
             return np.power(np.nanmin(np.divide(Q, self.j_a), axis=1), self.b)
-
-        return np.power(np.nansum(self.a_a * np.power(self.j_a, 1. / self.q)
-                                  / np.power(Q, 1. / self.q), axis=1),
-                        - self.b * self.q)
+        elif self.q == np.inf:
+            return np.power(np.nanprod(np.power(np.divide(Q, self.j_a), self.a_a), axis=1), self.b)
+        else:
+            return np.power(np.nansum(self.a_a * np.power(self.j_a, 1. / self.q)
+                                      / np.power(Q, 1. / self.q), axis=1),
+                            - self.b * self.q)
 
     def compute_p_net(self, prices):
         """
@@ -267,7 +275,10 @@ class Economy:
         :param prices: current rescaled prices
         :return: current wage-rescaled network prices
         """
-        return np.matmul(self.lamb_a, np.power(np.concatenate(([1], prices)), self.zeta))
+        if self.q == np.inf:
+            return np.sum(self.lamb_a, axis=1)
+        else:
+            return np.matmul(self.lamb_a, np.power(np.concatenate(([1], prices)), self.zeta))
 
     def compute_eq(self):
         """

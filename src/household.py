@@ -21,6 +21,7 @@ class Household(object):
         self.l = labour
         self.theta = theta
         self.thetabar = np.sum(self.theta)
+        self.theta = theta / self.thetabar
         self.gamma = gamma
         self.phi = phi
         self.v_phi = np.power(gamma, 1. / phi) / np.power(labour, 1 + 1. / phi)
