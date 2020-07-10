@@ -61,7 +61,7 @@ class PlotlyDynamics:
                    "axes.ymargin": 0.05
                    }
 
-        self.prods = self.dyn.compute_prods(self.dyn.eco, self.dyn.Q_real, self.dyn.t_max)
+        self.prods = self.dyn.compute_prods(self.dyn.eco, self.dyn.Q_real, self.dyn.t_max, self.dyn.n, self.dyn.prods)
         self.profits, self.balance, self.cashflow, self.tradeflow = \
             self.dyn.compute_profits_balance_cashflow_tradeflow(self.dyn.eco,
                                                                 self.dyn.Q_real,
