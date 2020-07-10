@@ -1,6 +1,6 @@
 import warnings
-import numba
-import economy as eco
+from numba import jit
+
 
 warnings.simplefilter("ignore")
 
@@ -164,7 +164,7 @@ class Dynamics(object):
                                                              self.prices[t + 1],
                                                              )
 
-    @numba.jit
+    @jit
     def discrete_dynamics(self, p0, w0, g0, t1, s0, B0):
         self.clear_all()
         # Initial conditions at t=0
@@ -210,7 +210,7 @@ class Dynamics(object):
         self.budget_res = B0 / w0
 
     @staticmethod
-    @numba.jit
+    @jit
     def compute_prods(e, Q_real, tmax, n, g0):
         prods = np.zeros((tmax + 1, n))
         prods[1] = g0
@@ -219,7 +219,7 @@ class Dynamics(object):
         return prods
 
     @staticmethod
-    @numba.jit
+    @jit
     def compute_profits_balance_cashflow_tradeflow(e, Q_real, Q_demand, prices, prods, stocks, labour, tmax, n):
         supply_goods = e.firms.z * prods + stocks
         demand = np.sum(Q_demand, axis=1)
@@ -235,7 +235,7 @@ class Dynamics(object):
         return profits, balance, cashflow, tradeflow
 
     @staticmethod
-    @numba.jit
+    @jit
     def compute_utility(e, Q_real, tmax):
         utility = np.zeros(tmax + 1)
         for t in range(1, tmax):
@@ -243,6 +243,6 @@ class Dynamics(object):
         return utility
 
     @staticmethod
-    @numba.jit
+    @jit
     def compute_targets(e, Q_demand, prices, tmax, n):
         targets = np.zeros((tmax + 1, n))

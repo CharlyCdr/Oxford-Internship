@@ -1,20 +1,20 @@
-import numba
 import numpy as np
 from scipy.optimize import fsolve
-
+from numba.experimental import jitclass
+from numba import float64
 
 spec = [
-    ('l', numba.float64),
-    ('theta', numba.float64[:]),
-    ('thetabar', numba.float64),
-    ('gamma', numba.float64),
-    ('phi', numba.float64),
-    ('v_phi', numba.float64),
-    ('kappa', numba.float64[:])
+    ('l', float64),
+    ('theta', float64[:]),
+    ('thetabar', float64),
+    ('gamma', float64),
+    ('phi', float64),
+    ('v_phi', float64),
+    ('kappa', float64[:])
 ]
 
 
-@numba.jitclass(spec)
+@jitclass(spec)
 class Household(object):
 
     def __init__(self, labour, theta, gamma, phi):

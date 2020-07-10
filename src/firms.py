@@ -10,11 +10,11 @@ alpha, alpha_p, beta, beta_p, w : inverse time-scales for feed-backs.
 The methods of this class encode the way firms update the varying quantities such as prices, productions etc...
 """
 
-import numba
 import numpy as np
+from numba.experimental import jitclass
+from numba import njit, float64
 
-
-@numba.njit
+@njit
 def clip_max(a, limit):
     a_copy = a
     for i in range(a.shape[0]):
@@ -25,7 +25,7 @@ def clip_max(a, limit):
     return a_copy
 
 
-@numba.njit
+@njit
 def clip_min(a, limit):
     a_copy = a
     for i in range(a.shape[0]):
@@ -37,17 +37,17 @@ def clip_min(a, limit):
 
 
 spec = [
-    ('z', numba.float64[:]),
-    ('sigma', numba.float64[:]),
-    ('alpha', numba.float64),
-    ('alpha_p', numba.float64),
-    ('beta', numba.float64),
-    ('beta_p', numba.float64),
-    ('w', numba.float64)
+    ('z', float64[:]),
+    ('sigma', float64[:]),
+    ('alpha', float64),
+    ('alpha_p', float64),
+    ('beta', float64),
+    ('beta_p', float64),
+    ('w', float64)
 ]
 
 
-@numba.jitclass(spec)
+@jitclass(spec)
 class Firms:
     def __init__(self, z, sigma, alpha, alpha_p, beta, beta_p, w):
 
