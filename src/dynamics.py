@@ -1,6 +1,7 @@
 import warnings
 import numba
 import economy as eco
+
 warnings.simplefilter("ignore")
 
 import numpy as np
@@ -15,7 +16,7 @@ class Dynamics(object):
         self.prices = np.zeros((t_max + 1, self.n))
         self.wages = np.zeros(t_max + 1)
         self.prices_net = np.zeros((t_max + 1, self.n))
-        self.prods = np.zeros((self.t_max +1, self.n))
+        self.prods = np.zeros(self.n)
         self.targets = np.zeros(self.n)
         self.stocks = np.zeros((t_max + 1, self.n))
         self.profits = np.zeros(self.n)
@@ -40,7 +41,7 @@ class Dynamics(object):
         self.prices = np.zeros((self.t_max + 1, self.n))
         self.wages = np.zeros(self.t_max + 1)
         self.prices_net = np.zeros(self.n)
-        self.prods = np.zeros((self.t_max+1, self.n))
+        self.prods = np.zeros(self.n)
         self.targets = np.zeros(self.n)
         self.stocks = np.zeros((self.t_max + 1, self.n))
         self.profits = np.zeros(self.n)
@@ -70,13 +71,13 @@ class Dynamics(object):
         """
 
         # Firms
-        self.supply = np.concatenate(([self.labour[t]], self.eco.firms.z * self.prods[t] + self.stocks[t]))
+        self.supply = np.concatenate(([self.labour[t]], self.eco.firms.z * self.prods + self.stocks[t]))
 
         self.targets = self.eco.firms.compute_targets(self.prices[t],
-                                                             self.Q_demand[t - 1],
-                                                             self.supply,
-                                                             self.prods
-                                                             )
+                                                      self.Q_demand[t - 1],
+                                                      self.supply,
+                                                      self.prods
+                                                      )
         self.Q_demand[t, 1:] = self.eco.firms.compute_demands_firms(self.targets,
                                                                     self.prices[t],
                                                                     self.prices_net,
@@ -107,9 +108,9 @@ class Dynamics(object):
         # Budget constraint
         offered_cons = self.Q_demand[t, 0, 1:] * self.s_vs_d[1:]
         self.b_vs_c, self.Q_real[t, 0, 1:], self.budget_res = self.eco.house.budget_constraint(self.budget[t],
-                                                                                                     self.prices[t],
-                                                                                                     offered_cons
-                                                                                                     )
+                                                                                               self.prices[t],
+                                                                                               offered_cons
+                                                                                               )
 
         # Real trades according to the supply constraint
         diag = np.diag(
@@ -153,7 +154,7 @@ class Dynamics(object):
             t]  # Clipping to avoid negative almost zero values
         self.prices_net = self.eco.compute_p_net(self.prices[t + 1])
 
-        self.prods[t + 1] = self.eco.production_function(self.Q_real[t, 1:, :])
+        self.prods = self.eco.production_function(self.Q_real[t, 1:, :])
         self.stocks[t + 1] = self.eco.firms.update_stocks(self.supply[1:],
                                                           self.tradereal[1:]
                                                           )
@@ -163,6 +164,7 @@ class Dynamics(object):
                                                              self.prices[t + 1],
                                                              )
 
+    @numba.jit
     def discrete_dynamics(self, p0, w0, g0, t1, s0, B0):
         self.clear_all()
         # Initial conditions at t=0
@@ -170,7 +172,7 @@ class Dynamics(object):
         self.wages[0] = w0
         self.budget_res = B0 / w0
 
-        self.prods[1] = g0
+        self.prods = g0
         self.stocks[1] = s0
         self.prices[1] = p0 / w0
         self.prices_net = self.eco.compute_p_net(self.prices[1])
@@ -203,15 +205,44 @@ class Dynamics(object):
             self.time_t_plus(t)
             t += 1
 
+        self.prods = g0
+        self.targets = t1
+        self.budget_res = B0 / w0
+
     @staticmethod
     @numba.jit
-    def compute_prods(e, Q_real, tmax, n):
-        prods = np.zeros((tmax, n))
-        for t in range(tmax):
-            prods[t, :] = e.production_function(Q_real[t, 1:, :])
+    def compute_prods(e, Q_real, tmax, n, g0):
+        prods = np.zeros((tmax + 1, n))
+        prods[1] = g0
+        for t in range(1, tmax - 1):
+            prods[t + 1, :] = e.production_function(Q_real[t, 1:, :])
         return prods
 
     @staticmethod
     @numba.jit
-    def compute_profits(e, Q_real, prices, tmax, n):
-        pass
+    def compute_profits_balance_cashflow_tradeflow(e, Q_real, Q_demand, prices, prods, stocks, labour, tmax, n):
+        supply_goods = e.firms.z * prods + stocks
+        demand = np.sum(Q_demand, axis=1)
+        profits, balance, cashflow, tradeflow = np.zeros((tmax + 1, n)), np.zeros((tmax + 1, n + 1)), \
+                                                np.zeros((tmax + 1, n)), np.zeros((tmax + 1, n + 1))
+        for t in range(1, tmax):
+            supply_t = np.concatenate(([labour[t]], supply_goods[t]))
+            profits[t], balance[t], cashflow[t], tradeflow[t] = e.firms.compute_profits_balance(prices[t],
+                                                                                                Q_real[t],
+                                                                                                supply_t,
+                                                                                                demand[t]
+                                                                                                )
+        return profits, balance, cashflow, tradeflow
+
+    @staticmethod
+    @numba.jit
+    def compute_utility(e, Q_real, tmax):
+        utility = np.zeros(tmax + 1)
+        for t in range(1, tmax):
+            utility[t] = e.house.utility(Q_real[t, 0, 1:], Q_real[t, 1:, 0])
+        return utility
+
+    @staticmethod
+    @numba.jit
+    def compute_targets(e, Q_demand, prices, tmax, n):
+        targets = np.zeros((tmax + 1, n))
