@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.optimize import fsolve
-from numba.experimental import jitclass
+from numba import jitclass
 from numba import float64
 
 spec = [
@@ -14,7 +14,6 @@ spec = [
 ]
 
 
-@jitclass(spec)
 class Household(object):
 
     def __init__(self, labour, theta, gamma, phi):

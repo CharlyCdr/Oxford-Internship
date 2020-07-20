@@ -11,7 +11,7 @@ The methods of this class encode the way firms update the varying quantities suc
 """
 
 import numpy as np
-from numba.experimental import jitclass
+from numba import jitclass
 from numba import njit, float64
 
 @njit
@@ -47,7 +47,6 @@ spec = [
 ]
 
 
-@jitclass(spec)
 class Firms:
     def __init__(self, z, sigma, alpha, alpha_p, beta, beta_p, w):
 
@@ -77,7 +76,7 @@ class Firms:
         :param tradeflow: current supply + demand
         :return:
         """
-        return prices * (1 - self.alpha_p * (profits / cashflow) - self.alpha * (balance[1:] / tradeflow[1:]))
+        return prices * np.exp(- self.alpha_p * (profits / cashflow) - self.alpha * (balance[1:] / tradeflow[1:]))
 
     def update_stocks(self, supply, sales):
         """
@@ -86,7 +85,7 @@ class Firms:
         :param sales: current sales
         :return: Depreciated unsold goods
         """
-        return (1 - self.sigma) * clip_min(supply - sales, 0)
+        return (1 - self.sigma) * np.clip(supply - sales, 0, None)
 
     def update_wages(self, labour_balance, total_labour):
         """
@@ -95,7 +94,7 @@ class Firms:
         :param total_labour: labour supply + labour demand
         :return: Updated wage
         """
-        return 1 - self.w * labour_balance / total_labour
+        return np.exp(- self.w * labour_balance / total_labour)
 
     def compute_targets(self, prices, Q_demand_prev, supply, prods):
         """
@@ -108,7 +107,7 @@ class Firms:
         :return: Production targets for the next period
         """
         est_profits, est_balance, est_cashflow, est_tradeflow = self.compute_forecasts(prices, Q_demand_prev, supply)
-        return prods * (1 + self.beta * (est_profits / est_cashflow) -
+        return prods * np.exp(self.beta * (est_profits / est_cashflow) -
                         self.beta_p * (est_balance[1:] / est_tradeflow[1:]))
 
     def compute_forecasts(self, prices, Q_demand_prev, supply):
@@ -147,7 +146,7 @@ class Firms:
             demanded_products_labor = np.multiply(lamb_a,
                                                   np.outer(np.multiply(prices_net_aux,
                                                                        np.power(targets, 1. / b)),
-                                                           np.concatenate((np.array([1]), prices)),
+                                                           np.concatenate((np.array([1]), prices))
                                                            ))
         else:
             demanded_products_labor = np.multiply(lamb_a,
