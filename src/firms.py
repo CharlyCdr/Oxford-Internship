@@ -76,7 +76,7 @@ class Firms:
         :param tradeflow: current supply + demand
         :return:
         """
-        return prices * np.exp(- self.alpha_p * (profits / cashflow) - self.alpha * (balance[1:] / tradeflow[1:]))
+        return prices * np.exp(-self.alpha_p * profits / cashflow - self.alpha * balance[1:] / tradeflow[1:])
 
     def update_stocks(self, supply, sales):
         """
@@ -107,8 +107,8 @@ class Firms:
         :return: Production targets for the next period
         """
         est_profits, est_balance, est_cashflow, est_tradeflow = self.compute_forecasts(prices, Q_demand_prev, supply)
-        return prods * np.exp(self.beta * (est_profits / est_cashflow) -
-                        self.beta_p * (est_balance[1:] / est_tradeflow[1:]))
+        return prods * np.exp(self.beta * est_profits / est_cashflow
+                              - self.beta_p * est_balance[1:] / est_tradeflow[1:])
 
     def compute_forecasts(self, prices, Q_demand_prev, supply):
         """
@@ -121,7 +121,7 @@ class Firms:
         """
 
         exp_gain = prices * np.sum(Q_demand_prev[:, 1:], axis=0)
-        exp_losses = np.dot(Q_demand_prev[1:, :], np.concatenate((np.array([1]), prices)))
+        exp_losses = np.matmul(Q_demand_prev[1:, :], np.concatenate((np.array([1]), prices)))
         exp_supply = supply
         exp_demand = np.sum(Q_demand_prev, axis=0)
         return exp_gain - exp_losses, exp_supply - exp_demand, exp_gain + exp_losses, exp_supply + exp_demand
@@ -138,7 +138,7 @@ class Firms:
         :return: (n, n+1) matrix of labour/goods demands
         """
         if q == 0:
-            demanded_products_labor = np.dot(np.diag(np.power(targets, 1. / b)),
+            demanded_products_labor = np.matmul(np.diag(np.power(targets, 1. / b)),
                                              lamb_a)
         elif q == np.inf:
             prices_net_aux = np.array(
@@ -166,6 +166,6 @@ class Firms:
         :return: Real wage-rescaled values of gains - losses, supply - demand, gains + losses, supply + demand
         """
         gain = prices * np.sum(Q_real[:, 1:], axis=0)
-        losses = np.dot(Q_real[1:, :], np.concatenate((np.array([1]), prices)))
+        losses = np.matmul(Q_real[1:, :], np.concatenate((np.array([1]), prices)))
 
         return gain - losses, supply - demand, gain + losses, supply + demand

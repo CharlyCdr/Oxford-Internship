@@ -11,7 +11,7 @@ import warnings
 import numpy as np
 import pandas as pd
 from numpy.linalg import lstsq
-from scipy.optimize import anderson
+from scipy.optimize import anderson, newton_krylov, leastsq
 
 from firms import Firms
 from household import Household
@@ -254,6 +254,14 @@ class Economy:
         self.init_firms(z_n, sigma, alpha, alpha_p, beta, beta_p, w)
         self.set_quantities()
 
+    def set_b(self, b):
+        """
+        Sets return to scale parameter
+        :param b: return to scale
+        :return: side effect
+        """
+        self.b = b
+
     def production_function(self, Q):
         """
         CES production function
@@ -301,20 +309,20 @@ class Economy:
                        self.b - 1,
                        self.house.kappa)
 
-                pg_init = anderson(lambda x: self.non_linear_eq_qzero(x, *par),
+                pg = leastsq(lambda x: self.non_linear_eq_qzero(x, *par),
                                    np.concatenate((init_guess_peq, init_guess_geq)),
-                                   M=50
-                                   )
 
-                pg_int = anderson(lambda x: self.non_linear_eq_qzero(x, *par),
-                                  pg_init,
-                                  M=50
-                                  )
+                                   )[0]
 
-                pg = anderson(lambda x: self.non_linear_eq_qzero(x, *par),
-                              pg_int,
-                              M=50
-                              )
+                # pg_int = anderson(lambda x: self.non_linear_eq_qzero(x, *par),
+                #                   pg_init,
+                #                   M=50
+                #                   )
+                #
+                # pg = anderson(lambda x: self.non_linear_eq_qzero(x, *par),
+                #               pg_int,
+                #               M=50
+                #               )
                 # pylint: disable=unbalanced-tuple-unpacking
                 self.p_eq, g = np.split(pg, 2)
                 self.g_eq = np.power(g, self.b)
@@ -332,9 +340,9 @@ class Economy:
                        self.house.kappa
                        )
 
-                uw = anderson(lambda x: self.non_linear_eq_qnonzero(x, *par),
+                uw = leastsq(lambda x: self.non_linear_eq_qnonzero(x, *par),
                               np.concatenate((init_guess_peq_zeta, init_guess_w)),
-                              M=50)
+                              )[0]
 
                 # pylint: disable=unbalanced-tuple-unpacking
                 u, w = np.split(uw, 2)

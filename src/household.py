@@ -13,7 +13,6 @@ spec = [
     ('kappa', float64[:])
 ]
 
-
 class Household(object):
 
     def __init__(self, labour, theta, gamma, phi):
