@@ -1,6 +1,6 @@
 import warnings
-from numba import jit
 
+from numba import jit
 
 warnings.simplefilter("ignore")
 
@@ -84,6 +84,8 @@ class Dynamics(object):
                                                                     self.eco.q,
                                                                     self.eco.b,
                                                                     self.eco.lamb_a,
+                                                                    self.eco.j_a,
+                                                                    self.eco.zeros_j_a,
                                                                     self.n
                                                                     )
 
@@ -150,8 +152,8 @@ class Dynamics(object):
                                                           ) / self.wages[t]
 
         self.budget[t] = self.budget[t] / self.wages[t]
-        self.budget_res = np.clip(self.budget_res, 0, None) / self.wages[
-            t]  # Clipping to avoid negative almost zero values
+        self.budget_res = np.clip(self.budget_res, 0, None) / self.wages[t]
+        # Clipping to avoid negative almost zero values
         self.prices_net = self.eco.compute_p_net(self.prices[t + 1])
 
         self.prods = self.eco.production_function(self.Q_real[t, 1:, :])
@@ -164,7 +166,6 @@ class Dynamics(object):
                                                              self.prices[t + 1],
                                                              )
 
-    @jit
     def discrete_dynamics(self, p0, w0, g0, t1, s0, B0):
         self.clear_all()
         # Initial conditions at t=0
@@ -192,6 +193,8 @@ class Dynamics(object):
                                                                     self.eco.q,
                                                                     self.eco.b,
                                                                     self.eco.lamb_a,
+                                                                    self.eco.j_a,
+                                                                    self.eco.zeros_j_a,
                                                                     self.n
                                                                     )
 

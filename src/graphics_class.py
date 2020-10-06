@@ -340,7 +340,7 @@ class PlotlyDynamics:
                                              color='rgba' + str(tuple(self.color_firms[l])))),
                               row=3, col=1)
             else:
-                fig.add_trace(go.Scattergl(x=np.arange(self.dyn.t_max),
+                fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
                                            y=self.dyn.prices[1:, l],
                                            mode='lines',
                                            marker=dict(
@@ -463,7 +463,7 @@ class PlotlyDynamics:
                          np.sum(self.dyn.eco.firms.z * self.dyn.eco.p_eq * self.dyn.eco.g_eq)]):
                     f_tmp, ax = plt.subplots(figsize=(5, 3))
                     ax.ticklabel_format(axis='y', scilimits=(-1, 1))
-                    if log and not (label in ['n_surplus', 'n_profits', 'utility']):
+                    if log and not (label in ['n_surplus', 'n_profits', 'utility', 'stocks']):
                         ax.set_yscale('log')
                     ax.set_xlabel(r'$t$')
                     ax.set_ylabel(label)
@@ -493,7 +493,7 @@ class PlotlyDynamics:
                          'budget', 'wages', 'cons', 'pib']):
                     f_tmp, ax = plt.subplots(figsize=(5, 3))
                     ax.ticklabel_format(axis='y', scilimits=(-1, 1))
-                    if log and not (label in ['n_surplus', 'n_profits', 'utility']):
+                    if log and not (label in ['n_surplus', 'n_profits', 'utility', 'stocks']):
                         ax.set_yscale('log')
                     ax.set_xlabel(r'$t$')
                     ax.set_ylabel(label)

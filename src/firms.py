@@ -11,8 +11,8 @@ The methods of this class encode the way firms update the varying quantities suc
 """
 
 import numpy as np
-from numba import jitclass
 from numba import njit, float64
+
 
 @njit
 def clip_max(a, limit):
@@ -126,7 +126,7 @@ class Firms:
         exp_demand = np.sum(Q_demand_prev, axis=0)
         return exp_gain - exp_losses, exp_supply - exp_demand, exp_gain + exp_losses, exp_supply + exp_demand
 
-    def compute_demands_firms(self, targets, prices, prices_net, q, b, lamb_a, n):
+    def compute_demands_firms(self, targets, prices, prices_net, q, b, lamb_a, j_a, zeros_j_a, n):
         """
         Computes
         :param targets: production targets for the next period
@@ -139,14 +139,16 @@ class Firms:
         """
         if q == 0:
             demanded_products_labor = np.matmul(np.diag(np.power(targets, 1. / b)),
-                                             lamb_a)
+                                                lamb_a)
         elif q == np.inf:
-            prices_net_aux = np.array(
-                [np.prod(np.power(np.concatenate((np.array([1]), prices)), lamb_a[i, :])) for i in range(n)])
+            prices_net_aux = np.array([
+                np.prod(np.power(j_a[i, :] * np.concatenate((np.array([1]), prices)), lamb_a[i, :])[zeros_j_a[i, :]])
+                for i in range(n)
+            ])
             demanded_products_labor = np.multiply(lamb_a,
                                                   np.outer(np.multiply(prices_net_aux,
                                                                        np.power(targets, 1. / b)),
-                                                           np.concatenate((np.array([1]), prices))
+                                                           np.concatenate((np.array([1]), 1. / prices))
                                                            ))
         else:
             demanded_products_labor = np.multiply(lamb_a,
@@ -160,7 +162,7 @@ class Firms:
         """
         Compute the real profits and balances of firms
         :param prices: current wage-rescaled prices
-        :param Q: (n+1, n+1) matrix of exchanged goods, labour and consumption
+        :param Q_real: (n+1, n+1) matrix of exchanged goods, labour and consumption
         :param supply: current supply
         :param demand: current demand
         :return: Real wage-rescaled values of gains - losses, supply - demand, gains + losses, supply + demand

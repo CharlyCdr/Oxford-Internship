@@ -11,7 +11,7 @@ import warnings
 import numpy as np
 import pandas as pd
 from numpy.linalg import lstsq
-from scipy.optimize import anderson, newton_krylov, leastsq
+from scipy.optimize import leastsq
 
 from firms import Firms
 from household import Household
@@ -229,6 +229,7 @@ class Economy:
             self.lamb_a = np.multiply(np.power(self.a_a, self.q * self.zeta), np.power(self.j_a, self.zeta))
             self.m_cal = np.diag(np.power(self.firms.z, self.zeta)) - self.lamb
             self.v = np.array(self.lamb_a[:, 0])
+        self.zeros_j_a = self.j_a != 0
 
     def get_eps_cal(self):
         """
