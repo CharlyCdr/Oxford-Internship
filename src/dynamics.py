@@ -48,9 +48,6 @@ class Dynamics(object):
         self.run_with_current_ic = False
 
     def clear_all(self, t_max=None):
-        if not t_max:
-            self.t_max = t_max
-
         self.prices = np.zeros((self.t_max + 1, self.n))
         self.wages = np.zeros(self.t_max + 1)
         self.prices_net = np.zeros(self.n)
@@ -226,9 +223,9 @@ class Dynamics(object):
         self.run_with_current_ic = False
 
     def discrete_dynamics(self):
-        if not self.p0 or not self.w0 or not self.g0 or not self.s0 or not self.B0 or not self.t1:
-            raise InputError("Inital conditions must be prescribed before running the simulation. Please use "
-                             "the set_initial_conditions method.")
+        # if not self.p0 or not self.w0 or not self.g0 or not self.s0 or not self.B0 or not self.t1:
+        #     raise InputError("Inital conditions must be prescribed before running the simulation. Please use "
+        #                      "the set_initial_conditions method.")
 
         self.clear_all()
         self.wages[0] = self.w0

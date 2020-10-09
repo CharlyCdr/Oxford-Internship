@@ -32,7 +32,7 @@ class Household(object):
         self.phi = phi
 
         # Secondary instances
-        self.v_phi = np.power(self.gamma, 1. / self.phi) / np.power(self.labour, 1 + 1. / self.phi)
+        self.v_phi = np.power(self.gamma, 1. / self.phi) / np.power(self.l, 1 + 1. / self.phi)
         self.kappa = self.theta / np.power(self.thetabar * self.v_phi,
                                            self.phi / (1 + self.phi))
 
