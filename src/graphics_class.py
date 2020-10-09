@@ -25,9 +25,7 @@ def herfindal(v):
 
 class PlotlyDynamics:
 
-    def __init__(self, dyn, k):
-        self.dyn = dyn
-        self.firms = np.random.choice(self.dyn.n, k, replace=False) if k else np.arange(self.dyn.n)
+    def __init__(self, dyn, k=None):
 
         self.norm_cbar = mpl.colors.Normalize(vmin=0, vmax=1)
 
@@ -41,7 +39,6 @@ class PlotlyDynamics:
         self.wage_label = r'$p_{0}(t)$'
 
         cmap = mpl.cm.get_cmap('jet')
-        self.color_firms = np.array([cmap(i / self.dyn.n) for i in range(self.dyn.n)])
         self.stocks_color = ListedColormap(sns.color_palette("PuBuGn_d", n_colors=100).as_hex())
         self.cons_color = ListedColormap(sns.color_palette("Greens_d", n_colors=100).as_hex())
 
@@ -61,21 +58,46 @@ class PlotlyDynamics:
                    "axes.ymargin": 0.05
                    }
 
-        self.prods = self.dyn.compute_prods(self.dyn.eco, self.dyn.Q_real, self.dyn.t_max, self.dyn.n, self.dyn.prods)
-        self.profits, self.balance, self.cashflow, self.tradeflow = \
-            self.dyn.compute_profits_balance_cashflow_tradeflow(self.dyn.eco,
-                                                                self.dyn.Q_real,
-                                                                self.dyn.Q_demand,
-                                                                self.dyn.prices,
-                                                                self.prods,
-                                                                self.dyn.stocks,
-                                                                self.dyn.labour,
-                                                                self.dyn.t_max,
-                                                                self.dyn.n)
-        self.utility = self.dyn.compute_utility(self.dyn.eco, self.dyn.Q_real, self.dyn.t_max)
+        if dyn:
+            self.dyn = dyn
+            self.k = k
+            if self.k:
+                self.firms = np.random.choice(self.dyn.n, self.k, replace=False) if self.k else np.arange(self.dyn.n)
+            self.color_firms = np.array([cmap(i / self.dyn.n) for i in range(self.dyn.n)])
+            self.prods = self.dyn.compute_prods(self.dyn.eco, self.dyn.Q_real, self.dyn.t_max, self.dyn.n, self.dyn.prods)
+            self.profits, self.balance, self.cashflow, self.tradeflow = \
+                self.dyn.compute_profits_balance_cashflow_tradeflow(self.dyn.eco,
+                                                                    self.dyn.Q_real,
+                                                                    self.dyn.Q_demand,
+                                                                    self.dyn.prices,
+                                                                    self.prods,
+                                                                    self.dyn.stocks,
+                                                                    self.dyn.labour,
+                                                                    self.dyn.t_max,
+                                                                    self.dyn.n)
+            self.utility = self.dyn.compute_utility(self.dyn.eco, self.dyn.Q_real, self.dyn.t_max)
 
-    def set_k(self, k):
-        self.firms = np.random.choice(self.dyn.n, k, replace=False) if k else np.arange(self.dyn.n)
+    def update_dyn(self, dyn):
+        if dyn:
+            self.dyn = dyn
+            self.firms = np.random.choice(self.dyn.n, self.k, replace=False) if self.k else np.arange(self.dyn.n)
+            self.color_firms = np.array([cmap(i / self.dyn.n) for i in range(self.dyn.n)])
+            self.prods = self.dyn.compute_prods(self.dyn.eco, self.dyn.Q_real, self.dyn.t_max, self.dyn.n, self.dyn.prods)
+            self.profits, self.balance, self.cashflow, self.tradeflow = \
+                self.dyn.compute_profits_balance_cashflow_tradeflow(self.dyn.eco,
+                                                                    self.dyn.Q_real,
+                                                                    self.dyn.Q_demand,
+                                                                    self.dyn.prices,
+                                                                    self.prods,
+                                                                    self.dyn.stocks,
+                                                                    self.dyn.labour,
+                                                                    self.dyn.t_max,
+                                                                    self.dyn.n)
+            self.utility = self.dyn.compute_utility(self.dyn.eco, self.dyn.Q_real, self.dyn.t_max)
+
+    def update_k(self, k):
+        self.k = k
+        self.firms = np.random.choice(self.dyn.n, self.k, replace=False) if self.k else np.arange(self.dyn.n)
 
     def plotHouse(self, from_eq=False):
         fig = make_subplots(rows=2, cols=2, shared_xaxes=True, vertical_spacing=0.02

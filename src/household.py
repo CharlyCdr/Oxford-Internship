@@ -23,13 +23,43 @@ class Household(object):
         :param gamma: aversion to labour parameter
         :param phi: concavity parameter
         """
+        # Primary instances
         self.l = labour
         thetabar = np.sum(theta)
         self.theta = theta / thetabar
         self.thetabar = 1.
         self.gamma = gamma
         self.phi = phi
-        self.v_phi = np.power(gamma, 1. / phi) / np.power(labour, 1 + 1. / phi)
+
+        # Secondary instances
+        self.v_phi = np.power(self.gamma, 1. / self.phi) / np.power(self.labour, 1 + 1. / self.phi)
+        self.kappa = self.theta / np.power(self.thetabar * self.v_phi,
+                                           self.phi / (1 + self.phi))
+
+    def update_labour(self, labour):
+        self.l = labour
+        self.v_phi = np.power(self.gamma, 1. / self.phi) / np.power(labour, 1 + 1. / self.phi)
+        self.kappa = self.theta / np.power(self.thetabar * self.v_phi,
+                                           self.phi / (1 + self.phi))
+
+    def update_theta(self, theta):
+        thetabar = np.sum(theta)
+        self.theta = theta / thetabar
+        self.thetabar = 1.
+        self.theta = theta
+        self.v_phi = np.power(self.gamma, 1. / self.phi) / np.power(self.l, 1 + 1. / self.phi)
+        self.kappa = self.theta / np.power(self.thetabar * self.v_phi,
+                                           self.phi / (1 + self.phi))
+
+    def update_gamma(self, gamma):
+        self.gamma = gamma
+        self.v_phi = np.power(self.gamma, 1. / self.phi) / np.power(self.l, 1 + 1. / self.phi)
+        self.kappa = self.theta / np.power(self.thetabar * self.v_phi,
+                                           self.phi / (1 + self.phi))
+
+    def update_phi(self, phi):
+        self.phi = phi
+        self.v_phi = np.power(self.gamma, 1. / self.phi) / np.power(self.l, 1 + 1. / self.phi)
         self.kappa = self.theta / np.power(self.thetabar * self.v_phi,
                                            self.phi / (1 + self.phi))
 

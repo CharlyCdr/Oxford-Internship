@@ -66,6 +66,27 @@ class Firms:
         self.beta_p = beta_p
         self.w = w
 
+    def update_z(self, z):
+        self.z = z
+
+    def update_sigma(self, sigma):
+        self.sigma = sigma
+
+    def update_alpha(self, alpha):
+        self.alpha = alpha
+
+    def update_alpha_p(self, alpha_p):
+        self.alpha_p = alpha_p
+
+    def update_beta(self, beta):
+        self.beta = beta
+
+    def update_beta_p(self, beta_p):
+        self.beta_p = beta_p
+
+    def update_w(self, w):
+        self.w = w
+
     def update_prices(self, prices, profits, balance, cashflow, tradeflow):
         """
         Updates prices according to observed profits and balances

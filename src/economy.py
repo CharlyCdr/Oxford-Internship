@@ -83,7 +83,7 @@ class Economy:
         self.j0 = j0
         self.j_a = None
         self.a0 = a0
-        a = np.random.uniform(0, 1, (n, n))
+        a = np.multiply(np.random.uniform(0, 1, (n, n)), self.j)
         self.a = np.array([(1 - a0[i]) * a[i] / np.sum(a[i]) for i in range(n)])
         self.a_a = None
         self.q = q
@@ -147,43 +147,39 @@ class Economy:
         :return:
         """
         self.firms = firms
-
-    def save_eco(self, name):
-        """
-        Saves the economy in multi-indexed dataframe in hdf format.
-        :param name: name of file.
-        :return: None
-        """
-        first_index = np.concatenate((['Firms' for k in range(11)], ['Household' for k in range(4)]))
-        second_index = np.concatenate(
-            (['q', 'b', 'z', 'sigma', 'alpha', 'alpha_p', 'beta', 'beta_p', 'w', 'p_eq', 'g_eq'],
-             ['l', 'theta', 'gamma', 'phi']))
-        multi_index = [first_index, second_index]
-        values = np.vstack((self.q * np.ones(self.n),
-                            self.b * np.ones(self.n),
-                            self.firms.z,
-                            self.firms.sigma,
-                            self.firms.alpha * np.ones(self.n),
-                            self.firms.alpha_p * np.ones(self.n),
-                            self.firms.beta * np.ones(self.n),
-                            self.firms.beta_p * np.ones(self.n),
-                            self.firms.w * np.ones(self.n),
-                            self.p_eq,
-                            self.g_eq,
-                            self.house.l * np.ones(self.n),
-                            self.house.theta,
-                            self.house.gamma * np.ones(self.n),
-                            self.house.phi * np.ones(self.n),
-                            ))
-
-        df_eco = pd.DataFrame(values,
-                              index=multi_index,
-                              columns=np.arange(1, self.n + 1)
-                              )
-        df_eco.to_hdf(name + '_eco.h5', key='df', mode='w')
-        np.save(name + '_network.npy', self.j_a)
-        if self.q != 0:
-            np.save(name + 'sub_network.npy', self.a_a)
+        
+    def update_firms_z(self, z):
+        self.firms.update_z(z)
+    
+    def update_firms_sigma(self, sigma):
+        self.firms.update_sigma(sigma)
+        
+    def update_firms_alpha(self, alpha):
+        self.firms.update_alpha(alpha)
+        
+    def update_firms_alpha_p(self, alpha_p):
+        self.firms.update_alpha_p(alpha_p)
+        
+    def update_firms_beta(self, beta):
+        self.firms.update_beta(beta)
+        
+    def update_firms_beta_p(self, beta_p):
+        self.firms.update_beta_p(beta_p)
+    
+    def update_firms_w(self, w):
+        self.firms.update_w(w)
+        
+    def update_house_labour(self, labour):
+        self.house.update_labour(labour)
+        
+    def update_house_theta(self, theta):
+        self.house.update_theta(theta)
+        
+    def update_house_gamma(self, gamma):
+        self.house.update_gamma(gamma)
+        
+    def update_house_phi(self, phi):
+        self.house.update_phi(phi)
 
     def set_j(self, j):
         """
@@ -245,7 +241,10 @@ class Economy:
         :return: side effect
         """
         min_eig = self.get_eps_cal()
-        z_n, sigma, alpha, alpha_p, beta, beta_p, w = self.firms.z + (eps - min_eig), \
+        z_n, sigma, alpha, alpha_p, beta, beta_p, w = self.firms.z * np.power(1 + (eps - min_eig) /
+                                                                              np.power(self.firms.z,
+                                                                                       self.zeta),
+                                                                              self.q + 1), \
                                                       self.firms.sigma, \
                                                       self.firms.alpha, \
                                                       self.firms.alpha_p, \
@@ -255,13 +254,37 @@ class Economy:
         self.init_firms(z_n, sigma, alpha, alpha_p, beta, beta_p, w)
         self.set_quantities()
 
-    def set_b(self, b):
+    def update_b(self, b):
         """
         Sets return to scale parameter
         :param b: return to scale
         :return: side effect
         """
         self.b = b
+        self.compute_eq()
+
+    def update_q(self, q):
+        self.q = q
+        self.zeta = 1 / (q + 1)
+        self.set_quantities()
+
+    def update_network(self, netstring, directed, d, n):
+        self.j = create_net(netstring, directed, n, d)
+        a = np.multiply(np.random.uniform(0, 1, (n, n)), self.j)
+        self.a = np.array([(1 - self.a0[i]) * a[i] / np.sum(a[i]) for i in range(n)])
+        self.set_quantities()
+
+    def update_a0(self, a0):
+        self.a0 = a0
+        a = np.multiply(np.random.uniform(0, 1, (self.n, self.n)), self.j)
+        self.a = np.array([(1 - self.a0[i]) * a[i] / np.sum(a[i]) for i in range(self.n)])
+        self.set_quantities()
+
+    def update_j0(self, j0):
+        self.j0 = j0
+        self.set_quantities()
+
+
 
     def production_function(self, Q):
         """
@@ -296,7 +319,7 @@ class Economy:
 
     def compute_eq(self):
         """
-        :return: compute the equilibrium of the economy
+        :return: compute the competitive equilibrium of the economy
         """
         # TODO: code COBB-DOUGLAS q=inf
         if self.b != 1:
@@ -311,19 +334,9 @@ class Economy:
                        self.house.kappa)
 
                 pg = leastsq(lambda x: self.non_linear_eq_qzero(x, *par),
-                                   np.concatenate((init_guess_peq, init_guess_geq)),
+                             np.concatenate((init_guess_peq, init_guess_geq)),
 
-                                   )[0]
-
-                # pg_int = anderson(lambda x: self.non_linear_eq_qzero(x, *par),
-                #                   pg_init,
-                #                   M=50
-                #                   )
-                #
-                # pg = anderson(lambda x: self.non_linear_eq_qzero(x, *par),
-                #               pg_int,
-                #               M=50
-                #               )
+                             )[0]
                 # pylint: disable=unbalanced-tuple-unpacking
                 self.p_eq, g = np.split(pg, 2)
                 self.g_eq = np.power(g, self.b)
@@ -342,8 +355,8 @@ class Economy:
                        )
 
                 uw = leastsq(lambda x: self.non_linear_eq_qnonzero(x, *par),
-                              np.concatenate((init_guess_peq_zeta, init_guess_w)),
-                              )[0]
+                             np.concatenate((init_guess_peq_zeta, init_guess_w)),
+                             )[0]
 
                 # pylint: disable=unbalanced-tuple-unpacking
                 u, w = np.split(uw, 2)
@@ -363,3 +376,40 @@ class Economy:
 
         self.mu_eq = np.power(self.house.thetabar * self.house.v_phi, self.house.phi / (1 + self.house.phi))
         self.b_eq = self.house.thetabar / self.mu_eq
+
+    def save_eco(self, name):
+        """
+        Saves the economy in multi-indexed dataframe in hdf format.
+        :param name: name of file.
+        :return: None
+        """
+        first_index = np.concatenate((['Firms' for k in range(11)], ['Household' for k in range(4)]))
+        second_index = np.concatenate(
+            (['q', 'b', 'z', 'sigma', 'alpha', 'alpha_p', 'beta', 'beta_p', 'w', 'p_eq', 'g_eq'],
+             ['l', 'theta', 'gamma', 'phi']))
+        multi_index = [first_index, second_index]
+        values = np.vstack((self.q * np.ones(self.n),
+                            self.b * np.ones(self.n),
+                            self.firms.z,
+                            self.firms.sigma,
+                            self.firms.alpha * np.ones(self.n),
+                            self.firms.alpha_p * np.ones(self.n),
+                            self.firms.beta * np.ones(self.n),
+                            self.firms.beta_p * np.ones(self.n),
+                            self.firms.w * np.ones(self.n),
+                            self.p_eq,
+                            self.g_eq,
+                            self.house.l * np.ones(self.n),
+                            self.house.theta,
+                            self.house.gamma * np.ones(self.n),
+                            self.house.phi * np.ones(self.n),
+                            ))
+
+        df_eco = pd.DataFrame(values,
+                              index=multi_index,
+                              columns=np.arange(1, self.n + 1)
+                              )
+        df_eco.to_hdf(name + '/eco.h5', key='df', mode='w')
+        np.save(name + '/network.npy', self.j_a)
+        if self.q != 0:
+            np.save(name + '/sub_network.npy', self.a_a)
