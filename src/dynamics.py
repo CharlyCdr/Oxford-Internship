@@ -49,6 +49,8 @@ class Dynamics(object):
         self.rho = 1
 
     def clear_all(self, t_max=None):
+        if t_max:
+            self.t_max = t_max
         self.prices = np.zeros((self.t_max + 1, self.n))
         self.wages = np.zeros(self.t_max + 1)
         self.prices_net = np.zeros(self.n)
@@ -74,14 +76,6 @@ class Dynamics(object):
     def update_tmax(self, t_max):
         self.clear_all(t_max)
         self.store = self.store
-
-        self.p0 = None
-        self.w0 = None
-        self.g0 = None
-        self.t1 = None
-        self.s0 = None
-        self.B0 = None
-
         self.run_with_current_ic = False
 
     def update_eco(self, e):

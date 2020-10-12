@@ -150,6 +150,7 @@ class Economy:
         
     def update_firms_z(self, z):
         self.firms.update_z(z)
+        self.compute_eq()
     
     def update_firms_sigma(self, sigma):
         self.firms.update_sigma(sigma)
@@ -171,15 +172,19 @@ class Economy:
         
     def update_house_labour(self, labour):
         self.house.update_labour(labour)
+        self.compute_eq()
         
     def update_house_theta(self, theta):
         self.house.update_theta(theta)
+        self.compute_eq()
         
     def update_house_gamma(self, gamma):
         self.house.update_gamma(gamma)
+        self.compute_eq()
         
     def update_house_phi(self, phi):
         self.house.update_phi(phi)
+        self.compute_eq()
 
     def set_j(self, j):
         """
@@ -226,6 +231,7 @@ class Economy:
             self.m_cal = np.diag(np.power(self.firms.z, self.zeta)) - self.lamb
             self.v = np.array(self.lamb_a[:, 0])
         self.zeros_j_a = self.j_a != 0
+        self.compute_eq()
 
     def get_eps_cal(self):
         """
@@ -320,8 +326,6 @@ class Economy:
         """
         :return: compute the competitive equilibrium of the economy
         """
-        # TODO: code COBB-DOUGLAS q=inf
-
         if self.q == np.inf:
             h = np.sum(self.a_a * np.log(np.ma.masked_invalid(np.divide(self.j_a, self.a_a))), axis=1)
             v = lstsq(np.eye(self.n)-self.a.T, self.house.kappa, rcond=10e-7)[0]
