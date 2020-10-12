@@ -285,7 +285,6 @@ class Economy:
         self.set_quantities()
 
 
-
     def production_function(self, Q):
         """
         CES production function
@@ -322,57 +321,66 @@ class Economy:
         :return: compute the competitive equilibrium of the economy
         """
         # TODO: code COBB-DOUGLAS q=inf
-        if self.b != 1:
-            if self.q == 0:
-                init_guess_peq = lstsq(self.m_cal, self.v, rcond=10e-7)[0]
-                init_guess_geq = lstsq(self.m_cal.T, np.divide(self.house.kappa, init_guess_peq), rcond=None)[0]
 
-                par = (self.firms.z,
-                       self.v,
-                       self.m_cal,
-                       self.b - 1,
-                       self.house.kappa)
-
-                pg = leastsq(lambda x: self.non_linear_eq_qzero(x, *par),
-                             np.concatenate((init_guess_peq, init_guess_geq)),
-
-                             )[0]
-                # pylint: disable=unbalanced-tuple-unpacking
-                self.p_eq, g = np.split(pg, 2)
-                self.g_eq = np.power(g, self.b)
-            else:
-                init_guess_peq_zeta = lstsq(self.m_cal, self.v, rcond=None)[0]
-                init_guess_w = lstsq(self.m_cal.T,
-                                     np.divide(self.house.kappa, init_guess_peq_zeta),
-                                     rcond=None)[0]
-
-                par = (np.power(self.firms.z, self.zeta),
-                       self.v,
-                       self.m_cal,
-                       self.q,
-                       (self.b - 1) / (self.b * self.q + 1),
-                       self.house.kappa
-                       )
-
-                uw = leastsq(lambda x: self.non_linear_eq_qnonzero(x, *par),
-                             np.concatenate((init_guess_peq_zeta, init_guess_w)),
-                             )[0]
-
-                # pylint: disable=unbalanced-tuple-unpacking
-                u, w = np.split(uw, 2)
-                uq = np.power(u, self.q)
-                self.p_eq = np.power(u, 1. / self.zeta)
-                self.g_eq = np.power(np.divide(w, np.power(self.firms.z, self.q * self.zeta) * uq),
-                                     self.b / (self.zeta * (self.b * self.q + 1)))
+        if self.q == np.inf:
+            h = np.sum(self.a_a * np.log(np.ma.masked_invalid(np.divide(self.j_a, self.a_a))), axis=1)
+            v = lstsq(np.eye(self.n)-self.a.T, self.house.kappa, rcond=10e-7)[0]
+            log_p = lstsq(np.eye(self.n) / self.b - self.a,
+                          - np.log(self.firms.z) / self.b + (1 - self.b) * np.log(v) / self.b + h, rcond=10e-7)[0]
+            log_g = - np.log(self.firms.z) - log_p + np.log(v)
+            self.p_eq, self.g_eq = np.exp(log_p), np.exp(log_g)
         else:
-            if self.q == 0:
-                self.p_eq = lstsq(self.m_cal, self.v, rcond=10e-7)[0]
-                self.g_eq = lstsq(self.m_cal.T, np.divide(self.house.kappa, self.p_eq), rcond=10e-7)[0]
+            if self.b != 1:
+                if self.q == 0:
+                    init_guess_peq = lstsq(self.m_cal, self.v, rcond=10e-7)[0]
+                    init_guess_geq = lstsq(self.m_cal.T, np.divide(self.house.kappa, init_guess_peq), rcond=None)[0]
+
+                    par = (self.firms.z,
+                           self.v,
+                           self.m_cal,
+                           self.b - 1,
+                           self.house.kappa)
+
+                    pg = leastsq(lambda x: self.non_linear_eq_qzero(x, *par),
+                                 np.concatenate((init_guess_peq, init_guess_geq)),
+
+                                 )[0]
+                    # pylint: disable=unbalanced-tuple-unpacking
+                    self.p_eq, g = np.split(pg, 2)
+                    self.g_eq = np.power(g, self.b)
+                else:
+                    init_guess_peq_zeta = lstsq(self.m_cal, self.v, rcond=None)[0]
+                    init_guess_w = lstsq(self.m_cal.T,
+                                         np.divide(self.house.kappa, init_guess_peq_zeta),
+                                         rcond=None)[0]
+
+                    par = (np.power(self.firms.z, self.zeta),
+                           self.v,
+                           self.m_cal,
+                           self.q,
+                           (self.b - 1) / (self.b * self.q + 1),
+                           self.house.kappa
+                           )
+
+                    uw = leastsq(lambda x: self.non_linear_eq_qnonzero(x, *par),
+                                 np.concatenate((init_guess_peq_zeta, init_guess_w)),
+                                 )[0]
+
+                    # pylint: disable=unbalanced-tuple-unpacking
+                    u, w = np.split(uw, 2)
+                    uq = np.power(u, self.q)
+                    self.p_eq = np.power(u, 1. / self.zeta)
+                    self.g_eq = np.power(np.divide(w, np.power(self.firms.z, self.q * self.zeta) * uq),
+                                         self.b / (self.zeta * (self.b * self.q + 1)))
             else:
-                peq_zeta = lstsq(self.m_cal, self.v, rcond=None)[0]
-                self.p_eq = np.power(peq_zeta, 1. / self.zeta)
-                w = lstsq(self.m_cal.T, np.divide(self.house.kappa, peq_zeta), rcond=None)[0]
-                self.g_eq = np.divide(w, np.power(self.firms.z, self.q * self.zeta) * np.power(peq_zeta, self.q))
+                if self.q == 0:
+                    self.p_eq = lstsq(self.m_cal, self.v, rcond=10e-7)[0]
+                    self.g_eq = lstsq(self.m_cal.T, np.divide(self.house.kappa, self.p_eq), rcond=10e-7)[0]
+                else:
+                    peq_zeta = lstsq(self.m_cal, self.v, rcond=None)[0]
+                    self.p_eq = np.power(peq_zeta, 1. / self.zeta)
+                    w = lstsq(self.m_cal.T, np.divide(self.house.kappa, peq_zeta), rcond=None)[0]
+                    self.g_eq = np.divide(w, np.power(self.firms.z, self.q * self.zeta) * np.power(peq_zeta, self.q))
 
         self.mu_eq = np.power(self.house.thetabar * self.house.v_phi, self.house.phi / (1 + self.house.phi))
         self.b_eq = self.house.thetabar / self.mu_eq

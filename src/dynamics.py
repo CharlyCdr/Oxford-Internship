@@ -46,6 +46,7 @@ class Dynamics(object):
         self.B0 = None
 
         self.run_with_current_ic = False
+        self.rho = 1
 
     def clear_all(self, t_max=None):
         self.prices = np.zeros((self.t_max + 1, self.n))
@@ -111,6 +112,7 @@ class Dynamics(object):
                                                                     self.eco.b,
                                                                     self.eco.lamb_a,
                                                                     self.eco.j_a,
+                                                                    self.eco.a_a,
                                                                     self.eco.zeros_j_a,
                                                                     self.n
                                                                     )
@@ -141,7 +143,8 @@ class Dynamics(object):
                                                                                                )
 
         # Real trades according to the supply constraint
-        diag = np.diag(np.clip((self.supply[1:] - self.Q_real[t, 0, 1:]) / (self.demand[1:] - self.Q_demand[t, 0, 1:]), None, 1))
+        diag = np.diag(np.clip((self.supply[1:] - self.rho * self.Q_real[t, 0, 1:]) / (self.demand[1:] - self.rho * self.Q_demand[t, 0, 1:]),
+                               None, 1))
 
         self.Q_real[t, 1:, 1:] = np.matmul(self.Q_demand[t, 1:, 1:],
                                                    diag)
@@ -252,6 +255,7 @@ class Dynamics(object):
                                                                     self.eco.b,
                                                                     self.eco.lamb_a,
                                                                     self.eco.j_a,
+                                                                    self.eco.a_a,
                                                                     self.eco.zeros_j_a,
                                                                     self.n
                                                                     )
