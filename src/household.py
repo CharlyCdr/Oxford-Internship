@@ -1,17 +1,6 @@
 import numpy as np
 from scipy.optimize import fsolve
-from numba import jitclass
-from numba import float64
 
-spec = [
-    ('l', float64),
-    ('theta', float64[:]),
-    ('thetabar', float64),
-    ('gamma', float64),
-    ('phi', float64),
-    ('v_phi', float64),
-    ('kappa', float64[:])
-]
 
 class Household(object):
 
