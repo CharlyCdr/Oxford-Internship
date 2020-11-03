@@ -69,7 +69,7 @@ class Household(object):
             # x0 = np.power(self.thetabar * self.v_phi, self.phi / (1 + self.phi)) / 2.
             # mu = fsolve(self.fixed_point_mu, x0, args=(self.thetabar, self.v_phi, self.phi, budget))
 
-        return mu, self.theta / (mu * prices), np.power(mu, 1. / self.phi) / self.v_phi
+        return self.theta / (mu * prices), np.power(mu, 1. / self.phi) / self.v_phi
 
     def budget_constraint(self, budget, prices, offered_cons):
         b_vs_c = np.minimum(budget / np.dot(offered_cons, prices), 1)

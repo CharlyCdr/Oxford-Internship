@@ -147,41 +147,41 @@ class Economy:
         :return:
         """
         self.firms = firms
-        
+
     def update_firms_z(self, z):
         self.firms.update_z(z)
         self.compute_eq()
-    
+
     def update_firms_sigma(self, sigma):
         self.firms.update_sigma(sigma)
-        
+
     def update_firms_alpha(self, alpha):
         self.firms.update_alpha(alpha)
-        
+
     def update_firms_alpha_p(self, alpha_p):
         self.firms.update_alpha_p(alpha_p)
-        
+
     def update_firms_beta(self, beta):
         self.firms.update_beta(beta)
-        
+
     def update_firms_beta_p(self, beta_p):
         self.firms.update_beta_p(beta_p)
-    
+
     def update_firms_w(self, w):
         self.firms.update_w(w)
-        
+
     def update_house_labour(self, labour):
         self.house.update_labour(labour)
         self.compute_eq()
-        
+
     def update_house_theta(self, theta):
         self.house.update_theta(theta)
         self.compute_eq()
-        
+
     def update_house_gamma(self, gamma):
         self.house.update_gamma(gamma)
         self.compute_eq()
-        
+
     def update_house_phi(self, phi):
         self.house.update_phi(phi)
         self.compute_eq()
@@ -290,7 +290,6 @@ class Economy:
         self.j0 = j0
         self.set_quantities()
 
-
     def production_function(self, Q):
         """
         CES production function
@@ -298,17 +297,16 @@ class Economy:
         :return: productions of the n firms
         """
         if self.q == 0:
-            return np.power(np.min(np.ma.masked_invalid(np.divide(Q, self.j_a)),
-                                   axis=1),
-                            self.b)
+            return np.power(np.nanmin(np.divide(Q, self.j_a),
+                                      axis=1), self.b)
         elif self.q == np.inf:
-            return np.power(np.prod(np.power(np.ma.masked_invalid(np.divide(Q, self.j_a)),
-                                             self.a_a),
-                                    axis=1),
+            return np.power(np.nanprod(np.power(np.divide(Q, self.j_a),
+                                                self.a_a),
+                                       axis=1),
                             self.b)
         else:
-            return np.power(np.sum(np.ma.masked_invalid(self.a_a * np.power(self.j_a, 1. / self.q)
-                                                        / np.power(Q, 1. / self.q)), axis=1),
+            return np.power(np.nansum(self.a_a * np.power(self.j_a, 1. / self.q)
+                                      / np.power(Q, 1. / self.q), axis=1),
                             - self.b * self.q)
 
     def compute_p_net(self, prices):
@@ -328,7 +326,7 @@ class Economy:
         """
         if self.q == np.inf:
             h = np.sum(self.a_a * np.log(np.ma.masked_invalid(np.divide(self.j_a, self.a_a))), axis=1)
-            v = lstsq(np.eye(self.n)-self.a.T, self.house.kappa, rcond=10e-7)[0]
+            v = lstsq(np.eye(self.n) - self.a.T, self.house.kappa, rcond=10e-7)[0]
             log_p = lstsq(np.eye(self.n) / self.b - self.a,
                           - np.log(self.firms.z) / self.b + (1 - self.b) * np.log(v) / self.b + h, rcond=10e-7)[0]
             log_g = - np.log(self.firms.z) - log_p + np.log(v)

@@ -147,7 +147,7 @@ class Firms:
         exp_demand = np.sum(Q_demand_prev, axis=0)
         return exp_gain - exp_losses, exp_supply - exp_demand, exp_gain + exp_losses, exp_supply + exp_demand
 
-    def compute_demands_firms(self, targets, prices, prices_net, q, b, lamb_a, j_a, a_a, zeros_j_a, n):
+    def compute_optimal_quantities_firms(self, targets, prices, prices_net, q, b, lamb_a, j_a, a_a, zeros_j_a, n):
         """
         Computes
         :param targets: production targets for the next period
