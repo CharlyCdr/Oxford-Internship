@@ -4,7 +4,7 @@ from scipy.optimize import fsolve
 
 class Household(object):
 
-    def __init__(self, labour, theta, gamma, phi):
+    def __init__(self, labour, theta, gamma, phi, w_p=None):
         """
         Set the fundamental parameters of the household
         :param labour: quantity of labour for phi --> \infty
@@ -19,6 +19,7 @@ class Household(object):
         self.thetabar = 1.
         self.gamma = gamma
         self.phi = phi
+        self.w_p = w_p if w_p else 0
 
         # Secondary instances
         self.v_phi = np.power(self.gamma, 1. / self.phi) / np.power(self.l, 1 + 1. / self.phi)
@@ -57,25 +58,29 @@ class Household(object):
                                                                                 1. + self.phi) / (
                        1. + self.phi)
 
-    def compute_demand_cons_labour_supply(self, budget, prices):
+    def compute_demand_cons_labour_supply(self, budget, prices, supply, demand, lda):
+        theta = self.theta * np.exp(-self.w_p * (supply - demand)/(supply + demand))
+        b_new = budget + (1 - lda) * demand
+
         if self.phi == 1:
-            mu = .5 * (np.sqrt(np.power(budget * self.v_phi, 2)
-                               + 4 * self.v_phi * self.thetabar)
-                       - budget * self.v_phi)
+            mu = .5 * (np.sqrt(np.power(b_new * self.v_phi, 2)
+                               + 4 * self.v_phi * np.sum(theta) * lda ** 2)
+                       - b_new * self.v_phi) / lda ** 2
         elif self.phi == np.inf:
-            mu = self.thetabar / (self.l + budget)
+            mu = np.sum(theta) / (self.l + budget)
+            raise Exception('Not coded yet')
         else:
             raise Exception('Not coded yet')
             # x0 = np.power(self.thetabar * self.v_phi, self.phi / (1 + self.phi)) / 2.
             # mu = fsolve(self.fixed_point_mu, x0, args=(self.thetabar, self.v_phi, self.phi, budget))
 
-        return self.theta / (mu * prices), np.power(mu, 1. / self.phi) / self.v_phi
+        return theta / (mu * prices), np.power(mu * lda, 1. / self.phi) / self.v_phi
 
     def budget_constraint(self, budget, prices, offered_cons):
-        b_vs_c = np.minimum(budget / np.dot(offered_cons, prices), 1)
-        cons_real = offered_cons * b_vs_c
-        budget_res = budget - np.dot(cons_real, prices)
-        return b_vs_c, cons_real, budget_res
+            b_vs_c = np.minimum(budget / np.dot(offered_cons, prices), 1)
+            cons_real = offered_cons * b_vs_c
+            budget_res = budget - np.dot(cons_real, prices)
+            return b_vs_c, cons_real, budget_res
 
     def fixed_point_mu(self, x, p):
         thetabar, vphi, phi, budget = p

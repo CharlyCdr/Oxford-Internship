@@ -107,7 +107,7 @@ class Economy:
         self.mu_eq = None
         self.b_eq = None
 
-    def init_house(self, labour, theta, gamma, phi):
+    def init_house(self, labour, theta, gamma, phi, w_p=None):
         """
         Initialize a household object as instance of economy class. Cf household class.
         :param labour:
@@ -116,7 +116,7 @@ class Economy:
         :param phi:
         :return:
         """
-        self.house = Household(labour, theta, gamma, phi)
+        self.house = Household(labour, theta, gamma, phi, w_p)
 
     def init_firms(self, z, sigma, alpha, alpha_p, beta, beta_p, w):
         """
