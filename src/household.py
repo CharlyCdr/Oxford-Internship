@@ -67,8 +67,7 @@ class Household(object):
                                + 4 * self.v_phi * np.sum(theta) * lda ** 2)
                        - b_new * self.v_phi) / lda ** 2
         elif self.phi == np.inf:
-            mu = np.sum(theta) / (self.l + budget)
-            raise Exception('Not coded yet')
+            mu = np.sum(theta) / (self.l + b_new)
         else:
             raise Exception('Not coded yet')
             # x0 = np.power(self.thetabar * self.v_phi, self.phi / (1 + self.phi)) / 2.

@@ -162,27 +162,22 @@ class Dynamics(object):
 
         self.budget[t] = self.budget_res + np.sum(self.q_exchange[1:, 0])
 
-        self.q_demand[t, 0, 1:] = self.q_demand[t, 0, 1:] * np.minimum(1, self.budget[t] / (
-                self.budget_res + self.nu * self.labour[t] + (1 - self.nu) * self.demand[t - 1, 0]))
-
         self.demand[t] = np.sum(self.q_demand[t], axis=0)
 
         s_vs_d = np.clip(self.supply[t] / self.demand[t], None, 1)  # =1 if supply >= constraint
 
-        self.budget_res = self.budget[t] - np.dot(self.prices[t], self.q_exchange[0, 1:])
-
         self.q_exchange[:, 1:] = np.matmul(self.q_demand[t, :, 1:], np.diag(s_vs_d[1:]))
+
+        self.q_exchange[0, 1:] = self.q_exchange[0, 1:] * np.minimum(1, self.budget[t] / (
+                np.dot(self.prices[t], self.q_exchange[0, 1:])))
+
+        self.budget_res = self.budget[t] - np.dot(self.prices[t], self.q_exchange[0, 1:])
 
         self.q_prod[:, 0] = self.q_exchange[1:, 0]
         self.q_prod[:, 1:] = self.q_exchange[1:, 1:] + np.minimum(
             self.stocks[t] - np.diag(self.stocks[t]) * np.eye(self.n), self.q_opt[:, 1:])
 
-        self.q_used = np.matmul(np.diag(np.nanmin(np.divide(self.q_prod, self.eco.j_a), axis=1)),
-                                self.eco.j_a)
-
         self.tradereal = np.sum(self.q_exchange, axis=0)
-
-        # Prices and wage update
 
         self.gains[t], self.losses[t] = self.prices[t] * self.tradereal[1:], np.matmul(self.q_exchange[1:, :],
                                                                                        np.concatenate(
@@ -213,6 +208,9 @@ class Dynamics(object):
         self.prices_net = self.eco.compute_p_net(self.prices[t + 1])
 
         self.prods[t + 1] = self.eco.production_function(self.q_prod)
+
+        self.q_used = (self.eco.q == 0) * np.matmul(np.diag(np.nanmin(np.divide(self.q_prod, self.eco.j_a), axis=1)),
+                                                    self.eco.j_a) + (self.eco.q != 0) * self.q_prod
 
         stocks_no_diagonal = self.stocks[t] - np.diag(self.stocks[t]) * np.eye(self.n)
 
