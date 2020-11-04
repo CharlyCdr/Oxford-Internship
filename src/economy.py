@@ -92,10 +92,12 @@ class Economy:
 
         # Auxiliary network variables
         self.lamb = None
-        self.a_a, self.j_a = None, None
+        self.a_a = None
+        self.j_a = None
         self.lamb_a = None
         self.m_cal = None
         self.v = None
+        self.zeros_j_a = None
 
         # Inheritances
         self.firms = None
@@ -115,6 +117,9 @@ class Economy:
         :param gamma:
         :param phi:
         :return:
+
+        Args:
+            w_p:
         """
         self.house = Household(labour, theta, gamma, phi, w_p)
 
@@ -214,20 +219,25 @@ class Economy:
         """
         if self.q == 0:
             self.lamb = self.j
-            self.a_a, self.j_a = np.hstack((np.array([self.a0]).T, self.a)), np.hstack((np.array([self.j0]).T, self.j))
+            self.a_a = np.hstack((np.array([self.a0]).T, self.a))
+            self.j_a = np.hstack((np.array([self.j0]).T, self.j))
             self.lamb_a = self.j_a
             self.m_cal = np.diag(self.firms.z) - self.lamb
             self.v = np.array(self.lamb_a[:, 0])
         elif self.q == np.inf:
             self.lamb = self.a
-            self.a_a, self.j_a = np.hstack((np.array([self.a0]).T, self.a)), np.hstack((np.array([self.j0]).T, self.j))
+            self.a_a = np.hstack((np.array([self.a0]).T, self.a))
+            self.j_a = np.hstack((np.array([self.j0]).T, self.j))
             self.lamb_a = self.a_a
             self.m_cal = np.eye(self.n) - self.lamb
             self.v = np.array(self.lamb_a[:, 0])
         else:
-            self.lamb = np.multiply(np.power(self.a, self.q * self.zeta), np.power(self.j, self.zeta))
-            self.a_a, self.j_a = np.hstack((np.array([self.a0]).T, self.a)), np.hstack((np.array([self.j0]).T, self.j))
-            self.lamb_a = np.multiply(np.power(self.a_a, self.q * self.zeta), np.power(self.j_a, self.zeta))
+            self.lamb = np.multiply(np.power(self.a, self.q * self.zeta),
+                                    np.power(self.j, self.zeta))
+            self.a_a = np.hstack((np.array([self.a0]).T, self.a))
+            self.j_a = np.hstack((np.array([self.j0]).T, self.j))
+            self.lamb_a = np.multiply(np.power(self.a_a, self.q * self.zeta),
+                                      np.power(self.j_a, self.zeta))
             self.m_cal = np.diag(np.power(self.firms.z, self.zeta)) - self.lamb
             self.v = np.array(self.lamb_a[:, 0])
         self.zeros_j_a = self.j_a != 0
@@ -326,16 +336,23 @@ class Economy:
         """
         if self.q == np.inf:
             h = np.sum(self.a_a * np.log(np.ma.masked_invalid(np.divide(self.j_a, self.a_a))), axis=1)
-            v = lstsq(np.eye(self.n) - self.a.T, self.house.kappa, rcond=10e-7)[0]
+            v = lstsq(np.eye(self.n) - self.a.T,
+                      self.house.kappa,
+                      rcond=10e-7)[0]
             log_p = lstsq(np.eye(self.n) / self.b - self.a,
-                          - np.log(self.firms.z) / self.b + (1 - self.b) * np.log(v) / self.b + h, rcond=10e-7)[0]
+                          - np.log(self.firms.z) / self.b + (1 - self.b) * np.log(v) / self.b + h,
+                          rcond=10e-7)[0]
             log_g = - np.log(self.firms.z) - log_p + np.log(v)
             self.p_eq, self.g_eq = np.exp(log_p), np.exp(log_g)
         else:
             if self.b != 1:
                 if self.q == 0:
-                    init_guess_peq = lstsq(self.m_cal, self.v, rcond=10e-7)[0]
-                    init_guess_geq = lstsq(self.m_cal.T, np.divide(self.house.kappa, init_guess_peq), rcond=None)[0]
+                    init_guess_peq = lstsq(self.m_cal,
+                                           self.v,
+                                           rcond=10e-7)[0]
+                    init_guess_geq = lstsq(self.m_cal.T,
+                                           np.divide(self.house.kappa, init_guess_peq),
+                                           rcond=None)[0]
 
                     par = (self.firms.z,
                            self.v,
@@ -344,14 +361,15 @@ class Economy:
                            self.house.kappa)
 
                     pg = leastsq(lambda x: self.non_linear_eq_qzero(x, *par),
-                                 np.concatenate((init_guess_peq, init_guess_geq)),
-
+                                 np.concatenate((init_guess_peq, init_guess_geq))
                                  )[0]
                     # pylint: disable=unbalanced-tuple-unpacking
                     self.p_eq, g = np.split(pg, 2)
                     self.g_eq = np.power(g, self.b)
                 else:
-                    init_guess_peq_zeta = lstsq(self.m_cal, self.v, rcond=None)[0]
+                    init_guess_peq_zeta = lstsq(self.m_cal,
+                                                self.v,
+                                                rcond=None)[0]
                     init_guess_w = lstsq(self.m_cal.T,
                                          np.divide(self.house.kappa, init_guess_peq_zeta),
                                          rcond=None)[0]
@@ -376,15 +394,25 @@ class Economy:
                                          self.b / (self.zeta * (self.b * self.q + 1)))
             else:
                 if self.q == 0:
-                    self.p_eq = lstsq(self.m_cal, self.v, rcond=10e-7)[0]
-                    self.g_eq = lstsq(self.m_cal.T, np.divide(self.house.kappa, self.p_eq), rcond=10e-7)[0]
+                    self.p_eq = lstsq(self.m_cal,
+                                      self.v,
+                                      rcond=10e-7)[0]
+                    self.g_eq = lstsq(self.m_cal.T,
+                                      np.divide(self.house.kappa, self.p_eq),
+                                      rcond=10e-7)[0]
                 else:
-                    peq_zeta = lstsq(self.m_cal, self.v, rcond=None)[0]
+                    peq_zeta = lstsq(self.m_cal,
+                                     self.v,
+                                     rcond=None)[0]
                     self.p_eq = np.power(peq_zeta, 1. / self.zeta)
-                    w = lstsq(self.m_cal.T, np.divide(self.house.kappa, peq_zeta), rcond=None)[0]
+                    w = lstsq(self.m_cal.T,
+                              np.divide(self.house.kappa, peq_zeta),
+                              rcond=None)[0]
                     self.g_eq = np.divide(w, np.power(self.firms.z, self.q * self.zeta) * np.power(peq_zeta, self.q))
 
-        self.mu_eq = np.power(self.house.thetabar * self.house.v_phi, self.house.phi / (1 + self.house.phi))
+        self.mu_eq = np.power(self.house.thetabar * self.house.v_phi,
+                              self.house.phi / (1 + self.house.phi))
+
         self.b_eq = self.house.thetabar / self.mu_eq
 
     def save_eco(self, name):
