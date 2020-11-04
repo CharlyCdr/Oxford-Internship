@@ -14,9 +14,8 @@ class Household(object):
         """
         # Primary instances
         self.l = labour
-        thetabar = np.sum(theta)
-        self.theta = theta / thetabar
-        self.thetabar = 1.
+        self.theta = theta
+        self.thetabar = np.sum(theta)
         self.gamma = gamma
         self.phi = phi
         self.w_p = w_p if w_p else 0
@@ -58,8 +57,8 @@ class Household(object):
                                                                                 1. + self.phi) / (
                        1. + self.phi)
 
-    def compute_demand_cons_labour_supply(self, budget, prices, supply, demand, lda):
-        theta = self.theta * np.exp(-self.w_p * (supply - demand)/(supply + demand))
+    def compute_demand_cons_labour_supply(self, budget, prices, supply, demand, lda, step_s):
+        theta = self.theta * np.exp(-self.w_p * step_s * (supply - demand)/(supply + demand))
         b_new = budget + (1 - lda) * demand
 
         if self.phi == 1:
@@ -74,12 +73,6 @@ class Household(object):
             # mu = fsolve(self.fixed_point_mu, x0, args=(self.thetabar, self.v_phi, self.phi, budget))
 
         return theta / (mu * prices), np.power(mu * lda, 1. / self.phi) / self.v_phi
-
-    def budget_constraint(self, budget, prices, offered_cons):
-            b_vs_c = np.minimum(budget / np.dot(offered_cons, prices), 1)
-            cons_real = offered_cons * b_vs_c
-            budget_res = budget - np.dot(cons_real, prices)
-            return b_vs_c, cons_real, budget_res
 
     def fixed_point_mu(self, x, p):
         thetabar, vphi, phi, budget = p

@@ -51,11 +51,11 @@ class Firms:
     def __init__(self, z, sigma, alpha, alpha_p, beta, beta_p, w):
 
         if (z < 0).any():
-            raise Exception("Productivity factors must be positive")
+            raise Exception("Productivity factors must be positive.")
         if (np.array([alpha, alpha_p, beta, beta_p]) < 0).any():
-            raise Exception("Inverse timescales must be positive")
-        if (sigma > 1).any() or (sigma < 0).any():
-            raise Exception("Depreciation of stocks must be between 0 and 1")
+            raise Exception("Inverse timescales must be positive.")
+        if (sigma < 0).any():
+            raise Exception("Depreciation of stocks must be positive.")
 
         # Production function parameters
         self.z = z
@@ -87,7 +87,7 @@ class Firms:
     def update_w(self, w):
         self.w = w
 
-    def update_prices(self, prices, profits, balance, cashflow, tradeflow):
+    def update_prices(self, prices, profits, balance, cashflow, tradeflow, step_s):
         """
         Updates prices according to observed profits and balances
         :param prices: current wage-rescaled prices
@@ -97,7 +97,7 @@ class Firms:
         :param tradeflow: current supply + demand
         :return:
         """
-        return prices * np.exp(-self.alpha_p * profits / cashflow - self.alpha * balance[1:] / tradeflow[1:])
+        return prices * np.exp(- step_s * (self.alpha_p * profits / cashflow + self.alpha * balance[1:] / tradeflow[1:]))
 
     def update_stocks(self, supply, sales):
         """
@@ -106,18 +106,18 @@ class Firms:
         :param sales: current sales
         :return: Depreciated unsold goods
         """
-        return (1 - self.sigma) * np.clip(supply - sales, 0, None)
+        return np.clip(supply - sales, 0, None)
 
-    def update_wages(self, labour_balance, total_labour):
+    def update_wages(self, labour_balance, total_labour, step_s):
         """
         Updates wages according to the observed tensions in the labour market
         :param labour_balance: labour supply - labour demand
         :param total_labour: labour supply + labour demand
         :return: Updated wage
         """
-        return np.exp(- self.w * labour_balance / total_labour)
+        return np.exp(- self.w * step_s * labour_balance / total_labour)
 
-    def compute_targets(self, prices, Q_demand_prev, supply, prods):
+    def compute_targets(self, prices, Q_demand_prev, supply, prods, step_s):
         """
         Computes the production target based on profit and balance forecasts.
         :param prices: current rescaled prices
@@ -128,8 +128,8 @@ class Firms:
         :return: Production targets for the next period
         """
         est_profits, est_balance, est_cashflow, est_tradeflow = self.compute_forecasts(prices, Q_demand_prev, supply)
-        return prods * np.exp(self.beta * est_profits / est_cashflow
-                              - self.beta_p * est_balance[1:] / est_tradeflow[1:])
+        return prods * np.exp(step_s * (self.beta * est_profits / est_cashflow
+                              - self.beta_p * est_balance[1:] / est_tradeflow[1:]))
 
     def compute_forecasts(self, prices, Q_demand_prev, supply):
         """
