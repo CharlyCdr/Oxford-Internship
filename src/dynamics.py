@@ -386,17 +386,17 @@ class Dynamics(object):
             else:
                 return df_t_diff.apply(lambda x: x.is_monotonic_increasing)[0]
 
-    def detect_crises(sim):
-        """
-        Function used to determine if prices converge or diverge.
-        :param sim: Dynamics object
-        :return: True in converges, False otherwise
-        """
-        fact_norm = float(max(sim.prices[-1000:-1]))
-        peaks_minus, peaks_properties_minus = find_peaks(-sim.prices.T[0][-1000:-1] / fact_norm)
-        peaks_plus, peaks_properties_plus = find_peaks(sim.prices.T[0][-1000:-1] / fact_norm)
-        return np.average(sim.prices.T[0][-1000:-1][peaks_plus]) / np.average(
-            sim.prices.T[0][-1000:-1][peaks_minus]) > 10e2
+    # def detect_crises(self):
+    #     """
+    #     Function used to determine if prices converge or diverge.
+    #     :param sim: Dynamics object
+    #     :return: True in converges, False otherwise
+    #     """
+    #     fact_norm = float(max(self.prices[-1000:-1]))
+    #     peaks_minus, peaks_properties_minus = find_peaks(-sim.prices.T[0][-1000:-1] / fact_norm)
+    #     peaks_plus, peaks_properties_plus = find_peaks(sim.prices.T[0][-1000:-1] / fact_norm)
+    #     return np.average(sim.prices.T[0][-1000:-1][peaks_plus]) / np.average(
+    #         sim.prices.T[0][-1000:-1][peaks_minus]) > 10e2
 
     @staticmethod
     @jit
