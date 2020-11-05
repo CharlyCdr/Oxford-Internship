@@ -317,14 +317,11 @@ class Dynamics(object):
         self.run_with_current_ic = True
 
     def norm_prices_prods_stocks(self):
-        if not self.eco.p_eq or not self.eco.p_eq:
-            self.eco.compute_eq()
-
         dfp = pd.DataFrame(self.prices[1:-1] - self.eco.p_eq, columns=['p' + str(i) for i in range(self.n)])
-        dfg = pd.DataFrame(self.prices[1:-1] - self.eco.g_eq, columns=['g' + str(i) for i in range(self.n)])
-        dfs = pd.DataFrame(self.prices[1:-1], columns=['s' + str(i) for i in range(self.n)])
+        dfg = pd.DataFrame(self.prods[1:-1] - self.eco.g_eq, columns=['g' + str(i) for i in range(self.n)])
+        dfs = pd.DataFrame([np.diagonal(s) for s in self.stocks[1:-1]], columns=['s' + str(i) for i in range(self.n)])
         df = pd.concat([dfp, dfg, dfs], axis=1)
-        df = np.linalg.norm(df, axis=1)
+        df = df.apply(lambda x:np.linalg.norm(x), axis=1)
         return df
 
     @staticmethod
@@ -340,7 +337,7 @@ class Dynamics(object):
         for t in range(1, len(data) - 10 + 1):
             t_diff.append(np.amax(data[- t - 10:- t]) - np.amin(data[- t - 10:- t]))
         df_t_diff = pd.DataFrame(t_diff[::-1])
-        return df_t_diff.apply(lambda x: x.is_monotonic_decreasing)[0], df_t_diff.iloc[-1] < 10e-8
+        return df_t_diff.apply(lambda x: x.is_monotonic_decreasing)[0], (df_t_diff.iloc[-1] < 10e-8)[0]
 
     @staticmethod
     def fisher_test(data):
@@ -350,7 +347,7 @@ class Dynamics(object):
         b = int(1 / stat)
         binom_vec = np.vectorize(lambda j: binom(q, j))
         j_vec = np.arange(b + 1)
-        p_value = 1 - np.sum(np.power(-1, j_vec) * binom_vec(q, j_vec) * np.power(1 - j_vec * stat, q - 1))
+        p_value = 1 - np.sum(np.power(-1, j_vec) * binom_vec(j_vec) * np.power(1 - j_vec * stat, q - 1))
         return p_value
 
     def detect_periodicity(self, data):
@@ -380,23 +377,19 @@ class Dynamics(object):
             for t in range(1, len(data) - 10 + 1):
                 t_diff.append(np.amax(data[- t - 10:- t]) - np.amin(data[- t - 10:- t]))
             df_t_diff = pd.DataFrame(t_diff[::-1])
-            if df_t_diff.apply(lambda x: x.is_monotonic_increasing)[0] and \
-                    df_t_diff.apply(lambda x: x.is_monotonic_decreasing)[0]:
-                return False
-            else:
-                return df_t_diff.apply(lambda x: x.is_monotonic_increasing)[0]
+            return df_t_diff.apply(lambda x: x.is_monotonic_increasing)[0] or np.isnan(df_t_diff).any()[0]
 
-    # def detect_crises(self):
-    #     """
-    #     Function used to determine if prices converge or diverge.
-    #     :param sim: Dynamics object
-    #     :return: True in converges, False otherwise
-    #     """
-    #     fact_norm = float(max(self.prices[-1000:-1]))
-    #     peaks_minus, peaks_properties_minus = find_peaks(-sim.prices.T[0][-1000:-1] / fact_norm)
-    #     peaks_plus, peaks_properties_plus = find_peaks(sim.prices.T[0][-1000:-1] / fact_norm)
-    #     return np.average(sim.prices.T[0][-1000:-1][peaks_plus]) / np.average(
-    #         sim.prices.T[0][-1000:-1][peaks_minus]) > 10e2
+    def detect_crises(self, data):
+        """
+        Function used to determine if prices converge or diverge.
+        :param sim: Dynamics object
+        :return: True in converges, False otherwise
+        """
+        fact_norm = float(max(data))
+        peaks_minus, peaks_properties_minus = find_peaks(-data / fact_norm)
+        peaks_plus, peaks_properties_plus = find_peaks(data / fact_norm)
+        return np.average(data.iloc[peaks_plus]) / np.average(
+            data.iloc[peaks_minus]) > 10e2
 
     @staticmethod
     @jit
