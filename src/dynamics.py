@@ -1,12 +1,16 @@
 import warnings
 
 from numba import jit
+from scipy.signal import periodogram, find_peaks
+from scipy.special.cython_special import binom
 
 warnings.simplefilter("ignore")
 
 import numpy as np
+import pandas as pd
 from exception import InputError
 from tqdm import tqdm_notebook as tqdm
+
 
 class Dynamics(object):
 
@@ -22,8 +26,10 @@ class Dynamics(object):
                 self.step_s = 1
             elif 5 > eps >= 0.1:
                 self.step_s = 0.1
+            elif eps < 0:
+                self.step_s = 1
             else:
-                self.step_s = np.power(10, np.floor(np.log10(eps)))
+                self.step_s = np.power(10, np.floor(np.log10(np.abs(eps))))
         self.prices = np.zeros((int((t_max + 1) / self.step_s), self.n))
         self.wages = np.zeros(int((t_max + 1) / self.step_s))
         self.prices_net = np.zeros((int((t_max + 1) / self.step_s), self.n))
@@ -309,9 +315,88 @@ class Dynamics(object):
             pbar.update(self.step_s)
 
         self.run_with_current_ic = True
-        # self.prods = self.g0
-        # self.targets = self.t1
-        # self.budget_res = self.B0 / self.w0
+
+    def norm_prices_prods_stocks(self):
+        if not self.eco.p_eq or not self.eco.p_eq:
+            self.eco.compute_eq()
+
+        dfp = pd.DataFrame(self.prices[1:-1] - self.eco.p_eq, columns=['p' + str(i) for i in range(self.n)])
+        dfg = pd.DataFrame(self.prices[1:-1] - self.eco.g_eq, columns=['g' + str(i) for i in range(self.n)])
+        dfs = pd.DataFrame(self.prices[1:-1], columns=['s' + str(i) for i in range(self.n)])
+        df = pd.concat([dfp, dfg, dfs], axis=1)
+        df = np.linalg.norm(df, axis=1)
+        return df
+
+    @staticmethod
+    def rolling_diff(data):
+        """
+        Function used for classifying the long-term behaviour of the prices in  a
+        single simulation: rolling diff version.
+        :param sim: Dynamics object
+        :param threshold: float, threshold for the function's precision
+        :return: Bool, for "prices converge" statement
+        """
+        t_diff = []
+        for t in range(1, len(data) - 10 + 1):
+            t_diff.append(np.amax(data[- t - 10:- t]) - np.amin(data[- t - 10:- t]))
+        df_t_diff = pd.DataFrame(t_diff[::-1])
+        return df_t_diff.apply(lambda x: x.is_monotonic_decreasing)[0], df_t_diff.iloc[-1] < 10e-8
+
+    @staticmethod
+    def fisher_test(data):
+        freq, dft = periodogram(data, fs=1)
+        q = int((len(data) - 1) / 2)
+        stat = max(dft) / np.sum(dft)
+        b = int(1 / stat)
+        binom_vec = np.vectorize(lambda j: binom(q, j))
+        j_vec = np.arange(b + 1)
+        p_value = 1 - np.sum(np.power(-1, j_vec) * binom_vec(q, j_vec) * np.power(1 - j_vec * stat, q - 1))
+        return p_value
+
+    def detect_periodicity(self, data):
+        """
+        Function used to determine if prices are periodic using a Fisher test at level 0.001.
+        :return: True if periodic, False otherwise
+        """
+        return self.fisher_test(data) < 0.001
+
+    def detect_convergent(self, data):
+        """
+        :param data:
+        :return:
+        """
+        return self.rolling_diff(data)
+
+    def detect_divergent(self, data):
+        """
+        Function used to determine if prices diverge.
+        :param sim: Dynamics object
+        :return: True if prices diverge, False otherwise
+        """
+        if np.isnan(data).any():
+            return True
+        else:
+            t_diff = []
+            for t in range(1, len(data) - 10 + 1):
+                t_diff.append(np.amax(data[- t - 10:- t]) - np.amin(data[- t - 10:- t]))
+            df_t_diff = pd.DataFrame(t_diff[::-1])
+            if df_t_diff.apply(lambda x: x.is_monotonic_increasing)[0] and \
+                    df_t_diff.apply(lambda x: x.is_monotonic_decreasing)[0]:
+                return False
+            else:
+                return df_t_diff.apply(lambda x: x.is_monotonic_increasing)[0]
+
+    def detect_crises(sim):
+        """
+        Function used to determine if prices converge or diverge.
+        :param sim: Dynamics object
+        :return: True in converges, False otherwise
+        """
+        fact_norm = float(max(sim.prices[-1000:-1]))
+        peaks_minus, peaks_properties_minus = find_peaks(-sim.prices.T[0][-1000:-1] / fact_norm)
+        peaks_plus, peaks_properties_plus = find_peaks(sim.prices.T[0][-1000:-1] / fact_norm)
+        return np.average(sim.prices.T[0][-1000:-1][peaks_plus]) / np.average(
+            sim.prices.T[0][-1000:-1][peaks_minus]) > 10e2
 
     @staticmethod
     @jit
