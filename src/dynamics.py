@@ -1,7 +1,7 @@
 import warnings
 
 from numba import jit
-from scipy.signal import periodogram, find_peaks
+from scipy.signal import periodogram
 from scipy.special.cython_special import binom
 
 warnings.simplefilter("ignore")
@@ -304,15 +304,15 @@ class Dynamics(object):
         self.time_t(1)
         self.time_t_plus(1)
         t = 2
-        pbar = tqdm(total=self.t_max + 1)
-        pbar.update(2 * self.step_s)
+        # pbar = tqdm(total=self.t_max + 1)
+        # pbar.update(2 * self.step_s)
         while t < int((self.t_max + 1) / self.step_s - 1):
             # print(t)
             self.time_t_minus(t)
             self.time_t(t)
             self.time_t_plus(t)
             t += 1
-            pbar.update(self.step_s)
+            # pbar.update(self.step_s)
 
         self.run_with_current_ic = True
 
@@ -355,14 +355,16 @@ class Dynamics(object):
         Function used to determine if prices are periodic using a Fisher test at level 0.001.
         :return: True if periodic, False otherwise
         """
-        return self.fisher_test(data) < 0.001
+
+        return self.fisher_test(data) < 0.001 and 10e8 > data.var() > 10e-8
 
     def detect_convergent(self, data):
         """
         :param data:
         :return:
         """
-        return self.rolling_diff(data)
+        bools = self.rolling_diff(data)
+        return bools[0], bools[1], data.iloc[-1] < 10e-8
 
     def detect_divergent(self, data):
         """
@@ -377,7 +379,7 @@ class Dynamics(object):
             for t in range(1, len(data) - 10 + 1):
                 t_diff.append(np.amax(data[- t - 10:- t]) - np.amin(data[- t - 10:- t]))
             df_t_diff = pd.DataFrame(t_diff[::-1])
-            return df_t_diff.apply(lambda x: x.is_monotonic_increasing)[0] or np.isnan(df_t_diff).any()[0]
+            return np.isnan(df_t_diff).any()[0] or (df_t_diff.iloc[-1] > 10e6)[0]
 
     def detect_crises(self, data):
         """
@@ -385,11 +387,7 @@ class Dynamics(object):
         :param sim: Dynamics object
         :return: True in converges, False otherwise
         """
-        fact_norm = float(max(data))
-        peaks_minus, peaks_properties_minus = find_peaks(-data / fact_norm)
-        peaks_plus, peaks_properties_plus = find_peaks(data / fact_norm)
-        return np.average(data.iloc[peaks_plus]) / np.average(
-            data.iloc[peaks_minus]) > 10e2
+        return self.fisher_test(data) < 0.001 and data.min() < 10e-4
 
     @staticmethod
     @jit

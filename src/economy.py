@@ -352,7 +352,7 @@ class Economy:
                                            rcond=10e-7)[0]
                     init_guess_geq = lstsq(self.m_cal.T,
                                            np.divide(self.house.kappa, init_guess_peq),
-                                           rcond=None)[0]
+                                           rcond=10e-7)[0]
 
                     par = (self.firms.z,
                            self.v,

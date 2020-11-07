@@ -52,6 +52,9 @@ class Household(object):
         self.kappa = self.theta / np.power(self.thetabar * self.v_phi,
                                            self.phi / (1 + self.phi))
 
+    def update_w_p(self, w_p):
+        self.w_p = w_p
+
     def utility(self, consumption, working_hours):
         return np.sum(self.theta * np.log(consumption)) - self.gamma * np.power(working_hours.sum() / self.l,
                                                                                 1. + self.phi) / (
