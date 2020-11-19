@@ -60,22 +60,21 @@ class Household(object):
                                                                                 1. + self.phi) / (
                        1. + self.phi)
 
-    def compute_demand_cons_labour_supply(self, budget, prices, supply, demand, lda, step_s):
+    def compute_demand_cons_labour_supply(self, budget, prices, supply, demand, step_s):
         theta = self.theta * np.exp(-self.w_p * step_s * (supply - demand)/(supply + demand))
-        b_new = budget + (1 - lda) * demand
 
         if self.phi == 1:
-            mu = .5 * (np.sqrt(np.power(b_new * self.v_phi, 2)
-                               + 4 * self.v_phi * np.sum(theta) * lda ** 2)
-                       - b_new * self.v_phi) / lda ** 2
+            mu = .5 * (np.sqrt(np.power(budget * self.v_phi, 2)
+                               + 4 * self.v_phi * np.sum(theta))
+                       - budget * self.v_phi)
         elif self.phi == np.inf:
-            mu = np.sum(theta) / (self.l + b_new)
+            mu = np.sum(theta) / (self.l + budget)
         else:
             raise Exception('Not coded yet')
             # x0 = np.power(self.thetabar * self.v_phi, self.phi / (1 + self.phi)) / 2.
             # mu = fsolve(self.fixed_point_mu, x0, args=(self.thetabar, self.v_phi, self.phi, budget))
 
-        return theta / (mu * prices), np.power(mu * lda, 1. / self.phi) / self.v_phi
+        return theta / (mu * prices), np.power(mu, 1. / self.phi) / self.v_phi
 
     def fixed_point_mu(self, x, p):
         thetabar, vphi, phi, budget = p

@@ -63,21 +63,21 @@ class PlotlyDynamics:
         if dyn:
             self.dyn = dyn
             self.k = k
-            if self.k:
-                self.firms = np.random.choice(self.dyn.n, self.k, replace=False) if self.k else np.arange(self.dyn.n)
-            self.color_firms = np.array([self.cmap(i / self.dyn.n) for i in range(self.dyn.n)])
-            self.prods = self.dyn.compute_prods(self.dyn.eco, self.dyn.Q_real, self.dyn.t_max, self.dyn.n, self.dyn.prods)
-            self.profits, self.balance, self.cashflow, self.tradeflow = \
-                self.dyn.compute_profits_balance_cashflow_tradeflow(self.dyn.eco,
-                                                                    self.dyn.Q_real,
-                                                                    self.dyn.Q_demand,
-                                                                    self.dyn.prices,
-                                                                    self.prods,
-                                                                    self.dyn.stocks,
-                                                                    self.dyn.labour,
-                                                                    self.dyn.t_max,
-                                                                    self.dyn.n)
-            self.utility = self.dyn.compute_utility(self.dyn.eco, self.dyn.Q_real, self.dyn.t_max)
+        #     if self.k:
+        #         self.firms = np.random.choice(self.dyn.n, self.k, replace=False) if self.k else np.arange(self.dyn.n)
+        #     self.color_firms = np.array([self.cmap(i / self.dyn.n) for i in range(self.dyn.n)])
+        #     self.prods = self.dyn.compute_prods(self.dyn.eco, self.dyn.Q_real, self.dyn.t_max, self.dyn.n, self.dyn.prods)
+        #     self.profits, self.balance, self.cashflow, self.tradeflow = \
+        #         self.dyn.compute_profits_balance_cashflow_tradeflow(self.dyn.eco,
+        #                                                             self.dyn.Q_real,
+        #                                                             self.dyn.Q_demand,
+        #                                                             self.dyn.prices,
+        #                                                             self.prods,
+        #                                                             self.dyn.stocks,
+        #                                                             self.dyn.labour,
+        #                                                             self.dyn.t_max,
+        #                                                             self.dyn.n)
+        #     self.utility = self.dyn.compute_utility(self.dyn.eco, self.dyn.Q_real, self.dyn.t_max)
 
     def update_dyn(self, dyn):
         if dyn:
@@ -177,7 +177,7 @@ class PlotlyDynamics:
         data = [eig_trace, hist_imag_trace, hist_real_trace]
         layout = go.Layout(bargap=0,
                            bargroupgap=0,
-                           xaxis=dict(title_text=r'$\Re{\mu}$',
+                           xaxis=dict(title_text=r'$\Re{(\mu)}$',
                                       showgrid=True,
                                       zeroline=True,
                                       showline=True,
@@ -186,7 +186,7 @@ class PlotlyDynamics:
                                       mirror=True,
                                       domain=[0, 0.7]
                                       ),
-                           yaxis=dict(title_text=r'$\Im{\mu}$',
+                           yaxis=dict(title_text=r'$\Im{(\mu)}$',
                                       showgrid=True,
                                       zeroline=True,
                                       showline=True,

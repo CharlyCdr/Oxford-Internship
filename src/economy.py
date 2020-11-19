@@ -155,7 +155,7 @@ class Economy:
 
     def update_firms_z(self, z):
         self.firms.update_z(z)
-        self.compute_eq()
+        #self.compute_eq()
 
     def update_firms_sigma(self, sigma):
         self.firms.update_sigma(sigma)
@@ -241,7 +241,6 @@ class Economy:
             self.m_cal = np.diag(np.power(self.firms.z, self.zeta)) - self.lamb
             self.v = np.array(self.lamb_a[:, 0])
         self.zeros_j_a = self.j_a != 0
-        self.compute_eq()
 
     def get_eps_cal(self):
         """
@@ -318,17 +317,6 @@ class Economy:
             return np.power(np.nansum(self.a_a * np.power(self.j_a, 1. / self.q)
                                       / np.power(Q, 1. / self.q), axis=1),
                             - self.b * self.q)
-
-    def compute_p_net(self, prices):
-        """
-        Compute the network prices
-        :param prices: current rescaled prices
-        :return: current wage-rescaled network prices
-        """
-        if self.q == np.inf:
-            return np.sum(self.lamb_a, axis=1)
-        else:
-            return np.matmul(self.lamb_a, np.power(np.concatenate(([1], prices)), self.zeta))
 
     def compute_eq(self):
         """

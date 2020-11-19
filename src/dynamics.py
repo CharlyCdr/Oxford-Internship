@@ -14,7 +14,7 @@ from tqdm import tqdm_notebook as tqdm
 
 class Dynamics(object):
 
-    def __init__(self, e, t_max, step_size=None, boost=None, nu=None, store=None):
+    def __init__(self, e, t_max, step_size=None, lda=None, nu=None, store=None):
         self.eco = e
         self.t_max = t_max
         self.n = self.eco.n
@@ -30,9 +30,9 @@ class Dynamics(object):
                 self.step_s = 1
             else:
                 self.step_s = np.power(10, np.floor(np.log10(np.abs(eps))))
+        self.step_s = 1
         self.prices = np.zeros((int((t_max + 1) / self.step_s), self.n))
         self.wages = np.zeros(int((t_max + 1) / self.step_s))
-        self.prices_net = np.zeros((int((t_max + 1) / self.step_s), self.n))
         self.prods = np.zeros((int((t_max + 1) / self.step_s), self.n))
         self.targets = np.zeros(self.n)
         self.stocks = np.zeros((int((t_max + 1) / self.step_s), self.n, self.n))
@@ -41,7 +41,7 @@ class Dynamics(object):
         self.supply = np.zeros((int((t_max + 1) / self.step_s), self.n + 1))
         self.demand = np.zeros((int((t_max + 1) / self.step_s), self.n + 1))
         self.tradereal = np.zeros(self.n + 1)
-        self.q_exchange = np.zeros((self.n + 1, self.n + 1))
+        self.q_exchange = np.zeros((int((t_max + 1) / self.step_s), self.n + 1, self.n + 1))
         self.q_demand = np.zeros((int((t_max + 1) / self.step_s), self.n + 1, self.n + 1))
         self.q_opt = np.zeros((self.n, self.n + 1))
         self.q_prod = np.zeros((self.n, self.n + 1))
@@ -49,8 +49,6 @@ class Dynamics(object):
         self.budget = np.zeros(int((t_max + 1) / self.step_s))
         self.budget_res = 0
         self.labour = np.zeros(int((t_max + 1) / self.step_s))
-
-        self.boost = boost if boost else 0
 
         self.store = store
 
@@ -63,13 +61,13 @@ class Dynamics(object):
 
         self.run_with_current_ic = False
         self.nu = nu if nu else 1
+        self.lda = lda if lda else 1
 
     def clear_all(self, t_max=None):
         if t_max:
             self.t_max = t_max
         self.prices = np.zeros((int((self.t_max + 1) / self.step_s), self.n))
         self.wages = np.zeros(int((self.t_max + 1) / self.step_s))
-        self.prices_net = np.zeros(self.n)
         self.prods = np.zeros((int((self.t_max + 1) / self.step_s), self.n))
         self.targets = np.zeros(self.n)
         self.stocks = np.zeros((int((self.t_max + 1) / self.step_s), self.n, self.n))
@@ -78,7 +76,7 @@ class Dynamics(object):
         self.supply = np.zeros((int((self.t_max + 1) / self.step_s), self.n + 1))
         self.demand = np.zeros((int((self.t_max + 1) / self.step_s), self.n + 1))
         self.tradereal = np.zeros(self.n + 1)
-        self.q_exchange = np.zeros((self.n + 1, self.n + 1))
+        self.q_exchange = np.zeros((int((self.t_max + 1) / self.step_s), self.n + 1, self.n + 1))
         self.q_demand = np.zeros((int((self.t_max + 1) / self.step_s), self.n + 1, self.n + 1))
         self.q_opt = np.zeros((self.n, self.n + 1))
         self.q_prod = np.zeros((self.n, self.n + 1))
@@ -133,7 +131,7 @@ class Dynamics(object):
         self.B0 = B0
         self.run_with_current_ic = False
 
-    def time_t_minus(self, t):
+    def planning(self, t):
         """
         Performs all the actions of step t-. First the household is updated
         (budget, consumption and labour offer). Then, firms forecast profits and balance for the current
@@ -147,29 +145,24 @@ class Dynamics(object):
             ([self.labour[t]], self.eco.firms.z * self.prods[t] + np.diagonal(self.stocks[t])))
 
         self.targets = self.eco.firms.compute_targets(self.prices[t],
-                                                      self.q_demand[t - 1],
+                                                      self.lda * self.q_demand[t - 1] +
+                                                      (1 - self.lda) * self.q_exchange[t - 1],
                                                       self.supply[t],
-                                                      self.prods[t] + self.boost,
+                                                      self.prods[t],
                                                       self.step_s
                                                       )
-        self.q_opt = self.eco.firms.compute_optimal_quantities_firms(self.targets,
-                                                                     self.prices[t],
-                                                                     self.prices_net,
-                                                                     self.eco.q,
-                                                                     self.eco.b,
-                                                                     self.eco.lamb_a,
-                                                                     self.eco.j_a,
-                                                                     self.eco.a_a,
-                                                                     self.eco.zeros_j_a,
-                                                                     self.n
-                                                                     )
+        self.q_opt = self.eco.firms.compute_optimal_quantities(self.targets,
+                                                               self.prices[t],
+                                                               self.prices_net,
+                                                               self.eco
+                                                               )
 
         self.q_demand[t, 1:, 0] = self.q_opt[:, 0]
         self.q_demand[t, 1:, 1:] = np.maximum(
             self.q_opt[:, 1:] - (self.stocks[t] - np.diagonal(self.stocks[t]) * np.eye(self.n)),
             0)
 
-    def time_t(self, t):
+    def exchanges_and_updates(self, t):
         """
         Performs all the actions of step t. First, an exchange period takes place where both firms and
         households may buy goods (including labor) in accordance to the supply constraint. Then, firms can
@@ -179,30 +172,34 @@ class Dynamics(object):
         :return: side-effect
         """
 
-        self.q_exchange[1:, 0] = self.q_demand[t, 1:, 0] * np.minimum(1, self.labour[t] / np.sum(
+        self.q_exchange[t, 1:, 0] = self.q_demand[t, 1:, 0] * np.minimum(1, self.labour[t] / np.sum(
             self.q_demand[t, 1:, 0]))
 
-        self.budget[t] = self.budget_res + np.sum(self.q_exchange[1:, 0])
+        self.budget[t] = self.budget_res + np.sum(self.q_exchange[t, 1:, 0])
+
+        self.q_demand[t, 0, 1:] = self.q_demand[t, 0, 1:] * (self.nu + (1-self.nu) *
+                                                             np.minimum(1, self.budget[t] /
+                                                                        (self.budget_res + self.labour[t])))
 
         self.demand[t] = np.sum(self.q_demand[t], axis=0)
 
         s_vs_d = np.minimum(self.supply[t] / self.demand[t], 1)  # =1 if supply >= constraint
 
-        self.q_exchange[:, 1:] = np.matmul(self.q_demand[t, :, 1:], np.diag(s_vs_d[1:]))
+        self.q_exchange[t, :, 1:] = np.matmul(self.q_demand[t, :, 1:], np.diag(s_vs_d[1:]))
 
-        self.q_exchange[0, 1:] = self.q_exchange[0, 1:] * np.minimum(1, self.budget[t] / (
-            np.dot(self.q_exchange[0, 1:], self.prices[t])))
+        self.q_exchange[t, 0, 1:] = self.q_exchange[t, 0, 1:] * np.minimum(1, self.budget[t] / (
+            np.dot(self.q_exchange[t, 0, 1:], self.prices[t])))
 
-        self.budget_res = self.budget[t] - np.dot(self.prices[t], self.q_exchange[0, 1:])
+        self.budget_res = self.budget[t] - np.dot(self.prices[t], self.q_exchange[t, 0, 1:])
 
-        self.q_prod[:, 0] = self.q_exchange[1:, 0]
-        self.q_prod[:, 1:] = self.q_exchange[1:, 1:] + np.minimum(
+        self.q_prod[:, 0] = self.q_exchange[t, 1:, 0]
+        self.q_prod[:, 1:] = self.q_exchange[t, 1:, 1:] + np.minimum(
             self.stocks[t] - np.diag(self.stocks[t]) * np.eye(self.n), self.q_opt[:, 1:])
 
-        self.tradereal = np.sum(self.q_exchange, axis=0)
+        self.tradereal = np.sum(self.q_exchange[t], axis=0)
 
         self.gains[t], self.losses[t] = self.prices[t] * self.tradereal[1:], \
-                                        np.matmul(self.q_exchange[1:, :],
+                                        np.matmul(self.q_exchange[t, 1:, :],
                                                   np.concatenate(
                                                       ([1], self.prices[t]))
                                                   )
@@ -211,7 +208,7 @@ class Dynamics(object):
                                                         self.supply[t, 0] + self.demand[t, 0],
                                                         self.step_s)
 
-    def time_t_plus(self, t):
+    def production(self, t):
         """
         Performs all the actions of step t+. Production for the next time-step starts and inventories
         are compiled.
@@ -230,7 +227,6 @@ class Dynamics(object):
         self.budget[t] = self.budget[t] / self.wages[t + 1]
         self.budget_res = np.maximum(self.budget_res, 0) / self.wages[t + 1]
         # Clipping to avoid negative almost zero values
-        self.prices_net = self.eco.compute_p_net(self.prices[t + 1])
 
         self.prods[t + 1] = self.eco.production_function(self.q_prod)
 
@@ -253,15 +249,10 @@ class Dynamics(object):
                                                              self.prices[t + 1],
                                                              self.supply[t, 0],
                                                              self.demand[t, 0],
-                                                             self.nu,
                                                              self.step_s
                                                              )
 
     def discrete_dynamics(self):
-        # if not self.p0 or not self.w0 or not self.g0 or not self.s0 or not self.B0 or not self.t1:
-        #     raise InputError("Inital conditions must be prescribed before running the simulation. Please use "
-        #                      "the set_initial_conditions method.")
-
         self.clear_all()
         self.wages[1] = self.w0
         self.budget_res = self.B0 / self.w0
@@ -269,13 +260,11 @@ class Dynamics(object):
         self.prods[1] = self.g0
         self.stocks[1] = self.s0
         self.prices[1] = self.p0 / self.w0
-        self.prices_net = self.eco.compute_p_net(self.prices[1])
         self.q_demand[1, 0, 1:], self.labour[1] = \
             self.eco.house.compute_demand_cons_labour_supply(self.budget_res,
                                                              self.prices[1],
                                                              1,
                                                              1,
-                                                             self.nu,
                                                              self.step_s
                                                              )
 
@@ -284,35 +273,28 @@ class Dynamics(object):
         # Firms
 
         self.targets = self.t1
-        self.q_opt = self.eco.firms.compute_optimal_quantities_firms(self.targets,
-                                                                     self.prices[1],
-                                                                     self.prices_net,
-                                                                     self.eco.q,
-                                                                     self.eco.b,
-                                                                     self.eco.lamb_a,
-                                                                     self.eco.j_a,
-                                                                     self.eco.a_a,
-                                                                     self.eco.zeros_j_a,
-                                                                     self.n
-                                                                     )
+        self.q_opt = self.eco.firms.compute_optimal_quantities(self.targets,
+                                                               self.prices[1],
+                                                               self.eco
+                                                               )
 
         self.q_demand[1, 1:, 0] = self.q_opt[:, 0]
         self.q_demand[1, 1:, 1:] = np.maximum(
             self.q_opt[:, 1:] - (self.stocks[1] - np.diagonal(self.stocks[1]) * np.eye(self.n)),
             0)
 
-        self.time_t(1)
-        self.time_t_plus(1)
+        self.exchanges_and_updates(1)
+        self.production(1)
         t = 2
-        # pbar = tqdm(total=self.t_max + 1)
-        # pbar.update(2 * self.step_s)
+        pbar = tqdm(total=self.t_max + 1)
+        pbar.update(2 * self.step_s)
         while t < int((self.t_max + 1) / self.step_s - 1):
             # print(t)
-            self.time_t_minus(t)
-            self.time_t(t)
-            self.time_t_plus(t)
+            self.planning(t)
+            self.exchanges_and_updates(t)
+            self.production(t)
             t += 1
-            # pbar.update(self.step_s)
+            pbar.update(self.step_s)
 
         self.run_with_current_ic = True
 
@@ -321,7 +303,7 @@ class Dynamics(object):
         dfg = pd.DataFrame(self.prods[1:-1] - self.eco.g_eq, columns=['g' + str(i) for i in range(self.n)])
         dfs = pd.DataFrame([np.diagonal(s) for s in self.stocks[1:-1]], columns=['s' + str(i) for i in range(self.n)])
         df = pd.concat([dfp, dfg, dfs], axis=1)
-        df = df.apply(lambda x:np.linalg.norm(x), axis=1)
+        df = df.apply(lambda x: np.linalg.norm(x), axis=1)
         return df
 
     @staticmethod
