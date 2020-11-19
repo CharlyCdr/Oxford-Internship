@@ -285,14 +285,11 @@ class Dynamics(object):
         self.exchanges_and_updates(1)
         self.production(1)
         t = 2
-        pbar = tqdm(total=self.t_max + 1)
-        pbar.update(2 * self.step_s)
         while t < int((self.t_max + 1) / self.step_s - 1):
             self.planning(t)
             self.exchanges_and_updates(t)
             self.production(t)
             t += 1
-            pbar.update(self.step_s)
 
         self.run_with_current_ic = True
 
@@ -372,11 +369,14 @@ class Dynamics(object):
     @staticmethod
     @jit
     def compute_gains_losses_supply_demand(e, q_demand, labour, q_exchange, prices, prods, stocks):
-        supply = np.array([np.concatenate(([labour[i]], e.firms.z * prods[i] + np.diag(stocks[i])))
-                           for i in range(len(prods))])
         demand = np.sum(q_demand, axis=1)
-        gains = np.array([prices[i] * np.sum(q_exchange[i, :, 1:], axis=0) for i in range(len(prices))])
-        losses = np.array([np.matmul(q_exchange[i, 1:, :], np.concatenate(([1], prices[i]))) for i in range(len(prices))])
+        gains = np.zeros((len(prices), e.n))
+        losses = np.zeros((len(prices), e.n))
+        supply = np.zeros((len(prices), e.n + 1))
+        for i in range(len(prices)):
+            gains[i] = prices[i] * np.sum(q_exchange[i, :, 1:], axis=0)
+            losses[i] = np.matmul(q_exchange[i, 1:, :], np.concatenate(([1], prices[i])))
+            supply[i] = np.concatenate(([labour[i]], e.firms.z * prods[i] + np.diag(stocks[i])))
         return gains, losses, supply, demand
 
     @staticmethod
