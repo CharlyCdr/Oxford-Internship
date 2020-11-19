@@ -4,7 +4,7 @@ from scipy.optimize import fsolve
 
 class Household(object):
 
-    def __init__(self, labour, theta, gamma, phi, w_p=None):
+    def __init__(self, labour, theta, gamma, phi, omega_p=None):
         """
         Set the fundamental parameters of the household
         :param labour: quantity of labour for phi --> \infty
@@ -18,7 +18,7 @@ class Household(object):
         self.thetabar = np.sum(theta)
         self.gamma = gamma
         self.phi = phi
-        self.w_p = w_p if w_p else 0
+        self.omega_p = omega_p if omega_p else 0
 
         # Secondary instances
         self.v_phi = np.power(self.gamma, 1. / self.phi) / np.power(self.l, 1 + 1. / self.phi)
@@ -52,8 +52,8 @@ class Household(object):
         self.kappa = self.theta / np.power(self.thetabar * self.v_phi,
                                            self.phi / (1 + self.phi))
 
-    def update_w_p(self, w_p):
-        self.w_p = w_p
+    def update_w_p(self, omega_p):
+        self.omega_p = omega_p
 
     def utility(self, consumption, working_hours):
         return np.sum(self.theta * np.log(consumption)) - self.gamma * np.power(working_hours.sum() / self.l,
@@ -61,7 +61,7 @@ class Household(object):
                        1. + self.phi)
 
     def compute_demand_cons_labour_supply(self, budget, prices, supply, demand, step_s):
-        theta = self.theta * np.exp(-self.w_p * step_s * (supply - demand)/(supply + demand))
+        theta = self.theta * np.exp(-self.omega_p * step_s * (supply - demand) / (supply + demand))
 
         if self.phi == 1:
             mu = .5 * (np.sqrt(np.power(budget * self.v_phi, 2)

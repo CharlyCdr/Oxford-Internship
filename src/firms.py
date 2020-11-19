@@ -48,7 +48,7 @@ spec = [
 
 
 class Firms:
-    def __init__(self, z, sigma, alpha, alpha_p, beta, beta_p, w):
+    def __init__(self, z, sigma, alpha, alpha_p, beta, beta_p, omega):
 
         if (z < 0).any():
             raise Exception("Productivity factors must be positive.")
@@ -64,7 +64,7 @@ class Firms:
         self.alpha_p = alpha_p
         self.beta = beta
         self.beta_p = beta_p
-        self.w = w
+        self.omega = omega
 
     def update_z(self, z):
         self.z = z
@@ -84,8 +84,8 @@ class Firms:
     def update_beta_p(self, beta_p):
         self.beta_p = beta_p
 
-    def update_w(self, w):
-        self.w = w
+    def update_w(self, omega):
+        self.omega = omega
 
     def update_prices(self, prices, profits, balance, cashflow, tradeflow, step_s):
         """
@@ -106,7 +106,7 @@ class Firms:
         :param total_labour: labour supply + labour demand
         :return: Updated wage
         """
-        return np.exp(- self.w * step_s * labour_balance / total_labour)
+        return np.exp(- self.omega * step_s * labour_balance / total_labour)
 
     def compute_targets(self, prices, Q_demand_prev, supply, prods, step_s):
         """
@@ -138,7 +138,7 @@ class Firms:
         exp_demand = np.sum(Q_demand_prev, axis=0)
         return exp_gain - exp_losses, exp_supply - exp_demand, exp_gain + exp_losses, exp_supply + exp_demand
 
-    def compute_optimal_quantities(self, targets, prices, prices_net, e):
+    def compute_optimal_quantities(self, targets, prices, e):
         """
         Computes
         :param e: economy class

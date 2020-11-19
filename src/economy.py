@@ -109,7 +109,7 @@ class Economy:
         self.mu_eq = None
         self.b_eq = None
 
-    def init_house(self, labour, theta, gamma, phi, w_p=None):
+    def init_house(self, labour, theta, gamma, phi, omega_p=None):
         """
         Initialize a household object as instance of economy class. Cf household class.
         :param labour:
@@ -121,9 +121,9 @@ class Economy:
         Args:
             w_p:
         """
-        self.house = Household(labour, theta, gamma, phi, w_p)
+        self.house = Household(labour, theta, gamma, phi, omega_p)
 
-    def init_firms(self, z, sigma, alpha, alpha_p, beta, beta_p, w):
+    def init_firms(self, z, sigma, alpha, alpha_p, beta, beta_p, omega):
         """
         Initialize a firms object as instance of economy class. Cf firms class.
         :param z:
@@ -135,7 +135,7 @@ class Economy:
         :param w:
         :return:
         """
-        self.firms = Firms(z, sigma, alpha, alpha_p, beta, beta_p, w)
+        self.firms = Firms(z, sigma, alpha, alpha_p, beta, beta_p, omega)
 
     def set_house(self, house):
         """
@@ -155,7 +155,7 @@ class Economy:
 
     def update_firms_z(self, z):
         self.firms.update_z(z)
-        #self.compute_eq()
+        # self.compute_eq()
 
     def update_firms_sigma(self, sigma):
         self.firms.update_sigma(sigma)
@@ -172,8 +172,8 @@ class Economy:
     def update_firms_beta_p(self, beta_p):
         self.firms.update_beta_p(beta_p)
 
-    def update_firms_w(self, w):
-        self.firms.update_w(w)
+    def update_firms_w(self, omega):
+        self.firms.update_w(omega)
 
     def update_house_labour(self, labour):
         self.house.update_labour(labour)
@@ -190,6 +190,9 @@ class Economy:
     def update_house_phi(self, phi):
         self.house.update_phi(phi)
         self.compute_eq()
+
+    def update_house_w_p(self, omega_p):
+        self.house.update_w_p(omega_p)
 
     def set_j(self, j):
         """
@@ -256,17 +259,17 @@ class Economy:
         :return: side effect
         """
         min_eig = self.get_eps_cal()
-        z_n, sigma, alpha, alpha_p, beta, beta_p, w = self.firms.z * np.power(1 + (eps - min_eig) /
-                                                                              np.power(self.firms.z,
-                                                                                       self.zeta),
-                                                                              self.q + 1), \
-                                                      self.firms.sigma, \
-                                                      self.firms.alpha, \
-                                                      self.firms.alpha_p, \
-                                                      self.firms.beta, \
-                                                      self.firms.beta_p, \
-                                                      self.firms.w
-        self.init_firms(z_n, sigma, alpha, alpha_p, beta, beta_p, w)
+        z_n, sigma, alpha, alpha_p, beta, beta_p, omega = self.firms.z * np.power(1 + (eps - min_eig) /
+                                                                                  np.power(self.firms.z,
+                                                                                           self.zeta),
+                                                                                  self.q + 1), \
+                                                          self.firms.sigma, \
+                                                          self.firms.alpha, \
+                                                          self.firms.alpha_p, \
+                                                          self.firms.beta, \
+                                                          self.firms.beta_p, \
+                                                          self.firms.omega
+        self.init_firms(z_n, sigma, alpha, alpha_p, beta, beta_p, omega)
         self.set_quantities()
 
     def update_b(self, b):
