@@ -141,29 +141,60 @@ class PlotlyDynamics:
         fig.update_yaxes(title_text=r'$B(t)$', row=2, col=1)
         fig.update_yaxes(title_text=r'$\mathcal{U}(t)$', row=1, col=2)
         fig.update_yaxes(title_text=r'$p_{0}(t)$', row=2, col=2)
-        for firm in self.firms:
+        if from_eq:
+            for firm in self.firms:
+                fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
+                                         y=self.dyn.q_exchange[1:-1, 0, firm + 1] - self.dyn.eco.cons_eq[firm],
+                                         mode='lines',
+                                         marker=dict(
+                                             color='rgba' + str(tuple(self.color_firms[firm])))
+                                         ),
+                              row=1, col=1)
             fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                     y=self.dyn.q_exchange[1:-1, 0, firm + 1],
-                                     mode='lines',
-                                     marker=dict(
-                                         color='rgba' + str(tuple(self.color_firms[firm])))
-                                     ),
-                          row=1, col=1)
-        fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                 y=self.utility[1:-1],
-                                 mode='lines'),
-                      row=1, col=2)
-        fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                 y=self.budget[1:-1],
-                                 mode='lines'),
-                      row=2, col=1)
-        fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                 y=self.dyn.wages[1:-1],
-                                 mode='lines'),
-                      row=2, col=2)
-        fig.update_layout(showlegend=False)
-        fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
-        fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey', exponentformat="power", showexponent='last')
+                                     y=self.utility[1:-1] - np.dot(self.dyn.eco.house.theta,
+                                                                   np.log(self.dyn.eco.cons_eq)) -
+                                       self.dyn.eco.house.gamma * np.power(
+                                         self.dyn.eco.labour_eq / self.dyn.eco.house.l, self.dyn.eco.house.phi + 1) / (
+                                               self.dyn.eco.house.phi + 1),
+                                     mode='lines'),
+                          row=1, col=2)
+            fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
+                                     y=self.budget[1:-1],
+                                     mode='lines'),
+                          row=2, col=1)
+            fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
+                                     y=self.dyn.wages[1:-1] - 1,
+                                     mode='lines'),
+                          row=2, col=2)
+            fig.update_layout(showlegend=False)
+            fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
+            fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey', exponentformat="power",
+                             showexponent='last')
+        else:
+            for firm in self.firms:
+                fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
+                                         y=self.dyn.q_exchange[1:-1, 0, firm + 1],
+                                         mode='lines',
+                                         marker=dict(
+                                             color='rgba' + str(tuple(self.color_firms[firm])))
+                                         ),
+                              row=1, col=1)
+            fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
+                                     y=self.utility[1:-1],
+                                     mode='lines'),
+                          row=1, col=2)
+            fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
+                                     y=self.budget[1:-1],
+                                     mode='lines'),
+                          row=2, col=1)
+            fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
+                                     y=self.dyn.wages[1:-1],
+                                     mode='lines'),
+                          row=2, col=2)
+            fig.update_layout(showlegend=False)
+            fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
+            fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey', exponentformat="power",
+                             showexponent='last')
 
         self.fig_house = fig
 
@@ -339,23 +370,26 @@ class PlotlyDynamics:
         fig.update_xaxes(title_text=r'$t$', row=2, col=1)
         fig.update_yaxes(title_text=r'$\frac{e_{i}(t)}{S_{i}(t)+D_{i}(t)}$', showticksuffix='last', row=1, col=1)
         fig.update_yaxes(title_text=r'$\frac{\mathcal{P}_{i}(t)}{C^{+}_{i}(t)+C^{-}_{i}(t)}$', row=2, col=1)
-        fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max-1),
-                                 y=(self.supply[1:-1, 0]-self.demand[1:-1, 0]) / (self.supply[1:-1, 0]+self.demand[1:-1, 0])
+        fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max - 1),
+                                 y=(self.supply[1:-1, 0] - self.demand[1:-1, 0]) / (
+                                         self.supply[1:-1, 0] + self.demand[1:-1, 0])
                                  ,
                                  mode='lines',
                                  line=dict(color='black', width=4, dash='dot')),
                       row=1, col=1)
         for l in self.firms:
-            fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max-1),
-                                     y=(self.supply[1:-1, l+1]-self.demand[1:-1, l+1]) / (self.supply[1:-1, l+1]+self.demand[1:-1,l+1])
+            fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max - 1),
+                                     y=(self.supply[1:-1, l + 1] - self.demand[1:-1, l + 1]) / (
+                                             self.supply[1:-1, l + 1] + self.demand[1:-1, l + 1])
                                      ,
                                      mode='lines',
                                      marker=dict(
                                          color='rgba' + str(tuple(self.color_firms[l])))
                                      ),
                           row=1, col=1)
-            fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max-1),
-                                     y=(self.gains[1:-1, l]-self.losses[1:-1, l]) / (self.gains[1:-1, l]+self.losses[1:-1, l]),
+            fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max - 1),
+                                     y=(self.gains[1:-1, l] - self.losses[1:-1, l]) / (
+                                             self.gains[1:-1, l] + self.losses[1:-1, l]),
                                      mode='lines',
                                      marker=dict(
                                          color='rgba' + str(tuple(self.color_firms[l])))
@@ -562,6 +596,7 @@ class PlotlyDynamics:
     #                 plt.tight_layout()
     #                 f_tmp.savefig(savepath + '/' + savelabel + '.png', dpi=200)
     #
+
 
 class PlotDynamics:
 

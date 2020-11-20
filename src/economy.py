@@ -107,6 +107,8 @@ class Economy:
         self.p_eq = None
         self.g_eq = None
         self.mu_eq = None
+        self.labour_eq = None
+        self.cons_eq = None
         self.b_eq = None
 
     def init_house(self, labour, theta, gamma, phi, omega_p=None):
@@ -155,7 +157,8 @@ class Economy:
 
     def update_firms_z(self, z):
         self.firms.update_z(z)
-        # self.compute_eq()
+        self.set_quantities()
+        self.compute_eq()
 
     def update_firms_sigma(self, sigma):
         self.firms.update_sigma(sigma)
@@ -204,6 +207,8 @@ class Economy:
             raise ValueError('Input-output network must be of size (%d, %d)' % (self.n, self.n))
 
         self.j = j
+        self.set_quantities()
+        self.compute_eq()
 
     def set_a(self, a):
         """
@@ -214,6 +219,8 @@ class Economy:
         if a.shape != (self.n, self.n):
             raise ValueError('Substitution network must be of size (%d, %d)' % (self.n, self.n))
         self.a = a
+        self.set_quantities()
+        self.compute_eq()
 
     def set_quantities(self):
         """
@@ -271,6 +278,7 @@ class Economy:
                                                           self.firms.omega
         self.init_firms(z_n, sigma, alpha, alpha_p, beta, beta_p, omega)
         self.set_quantities()
+        self.compute_eq()
 
     def update_b(self, b):
         """
@@ -285,22 +293,26 @@ class Economy:
         self.q = q
         self.zeta = 1 / (q + 1)
         self.set_quantities()
+        self.compute_eq()
 
     def update_network(self, netstring, directed, d, n):
         self.j = create_net(netstring, directed, n, d)
         a = np.multiply(np.random.uniform(0, 1, (n, n)), self.j)
         self.a = np.array([(1 - self.a0[i]) * a[i] / np.sum(a[i]) for i in range(n)])
         self.set_quantities()
+        self.compute_eq()
 
     def update_a0(self, a0):
         self.a0 = a0
         a = np.multiply(np.random.uniform(0, 1, (self.n, self.n)), self.j)
         self.a = np.array([(1 - self.a0[i]) * a[i] / np.sum(a[i]) for i in range(self.n)])
         self.set_quantities()
+        self.compute_eq()
 
     def update_j0(self, j0):
         self.j0 = j0
         self.set_quantities()
+        self.compute_eq()
 
     def production_function(self, Q):
         """
@@ -403,7 +415,8 @@ class Economy:
 
         self.mu_eq = np.power(self.house.thetabar * self.house.v_phi,
                               self.house.phi / (1 + self.house.phi))
-
+        self.labour_eq = np.power(self.mu_eq, 1. / self.house.phi) / self.house.v_phi
+        self.cons_eq = self.house.theta / (self.mu_eq * self.p_eq)
         self.b_eq = self.house.thetabar / self.mu_eq
 
     def save_eco(self, name):
