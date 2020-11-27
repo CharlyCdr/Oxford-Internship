@@ -61,7 +61,7 @@ class Household(object):
                        1. + self.phi)
 
     def compute_demand_cons_labour_supply(self, budget, prices, supply, demand, step_s):
-        theta = self.theta * np.exp(-self.omega_p * step_s * (supply - demand) / (supply + demand))
+        theta = self.theta * np.exp(- self.omega_p * step_s * (supply - demand) / (supply + demand))
 
         if self.phi == 1:
             mu = .5 * (np.sqrt(np.power(budget * self.v_phi, 2)

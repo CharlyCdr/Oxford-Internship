@@ -21,9 +21,8 @@ warnings.simplefilter("ignore")
 
 
 class Economy:
-    """
-    This class summarizes all the economy attributes.
-    """
+
+    # Fixed point equations for equilibrium computation
 
     @staticmethod
     def non_linear_eq_qnonzero(x, *p):
@@ -67,14 +66,6 @@ class Economy:
         m2 = g * m1 - p * np.dot(m_cal.T, g)
         return np.concatenate((m1 - v1 - v, m2 - g * v + kappa))
 
-    @staticmethod
-    def adj_list(j):
-        """
-        :param j: Network adjacency matrix.
-        :return: Representation of the network as an adjacency list.
-        """
-        return np.array([np.where(j[i] != 0)[0] for i in range(len(j))])
-
     def __init__(self, n, d, netstring, directed, j0, a0, q, b):
 
         # Network initialization
@@ -99,7 +90,7 @@ class Economy:
         self.v = None
         self.zeros_j_a = None
 
-        # Inheritances
+        # Firms and household sub-classes
         self.firms = None
         self.house = None
 
@@ -111,33 +102,33 @@ class Economy:
         self.cons_eq = None
         self.b_eq = None
 
-    def init_house(self, labour, theta, gamma, phi, omega_p=None):
+    def init_house(self, l_0, theta, gamma, phi, omega_p=None):
         """
-        Initialize a household object as instance of economy class. Cf household class.
-        :param labour:
+        Initialize a household object as instance of economy class. Refer to household class.
+        :param l_0:
         :param theta:
         :param gamma:
         :param phi:
-        :return:
-
-        Args:
-            w_p:
+        :param omega_p:
+        :return: Initialize household class with given parameters.
         """
-        self.house = Household(labour, theta, gamma, phi, omega_p)
+        self.house = Household(l_0, theta, gamma, phi, omega_p)
 
     def init_firms(self, z, sigma, alpha, alpha_p, beta, beta_p, omega):
         """
-        Initialize a firms object as instance of economy class. Cf firms class.
+        Initialize a firms object as instance of economy class. Refer to firms class.
         :param z:
         :param sigma:
         :param alpha:
         :param alpha_p:
         :param beta:
         :param beta_p:
-        :param w:
-        :return:
+        :param omega:
+        :return: Initialize firms class with given parameters.
         """
         self.firms = Firms(z, sigma, alpha, alpha_p, beta, beta_p, omega)
+
+    # Setters for class instances
 
     def set_house(self, house):
         """
@@ -154,6 +145,8 @@ class Economy:
         :return:
         """
         self.firms = firms
+
+    # Update methods for firms and household
 
     def update_firms_z(self, z):
         self.firms.update_z(z)
@@ -196,6 +189,8 @@ class Economy:
 
     def update_house_w_p(self, omega_p):
         self.house.update_w_p(omega_p)
+
+
 
     def set_j(self, j):
         """
@@ -363,12 +358,25 @@ class Economy:
                            self.b - 1,
                            self.house.kappa)
 
+                    pert_peq = lstsq(self.m_cal, self.firms.z * init_guess_peq * np.log(init_guess_geq), rcond=10e-7)[0]
+
+                    pert_geq = lstsq(np.transpose(self.m_cal),
+                                     - np.divide(self.house.kappa,
+                                                 np.power(init_guess_peq, 2)) * pert_peq +
+                                     self.firms.z * init_guess_geq * np.log(init_guess_geq),
+                                     rcond=10e-7)[0]
+
                     pg = leastsq(lambda x: self.non_linear_eq_qzero(x, *par),
-                                 np.concatenate((init_guess_peq, init_guess_geq))
-                                 )[0]
+                                 np.array(np.concatenate((init_guess_peq + (1 - self.b) * pert_peq,
+                                                          np.power(init_guess_geq + (1 - self.b) * (
+                                                                  pert_geq - init_guess_geq * np.log(init_guess_geq)),
+                                                                   1 / self.b))).reshape(2 * self.n)))[0]
+
                     # pylint: disable=unbalanced-tuple-unpacking
                     self.p_eq, g = np.split(pg, 2)
                     self.g_eq = np.power(g, self.b)
+
+
                 else:
                     init_guess_peq_zeta = lstsq(self.m_cal,
                                                 self.v,

@@ -38,8 +38,8 @@ class PlotlyDynamics:
         self.utility_label = r'$\mathcal{U}(t)$'
         self.wage_label = r'$\frac{p_{0}(t+1)}{p_0(t)}$'
 
-        self.profits_bar_label = r'\frac{\mathcal{P}_i(t)}{\mathscr{C}_i^+(t)+\mathscr{C}_i^-(t)}$'
-        self.surplus_bar_label = r'\frac{\mathcal{E}_i(t)}{\mathscr{C}_i^+(t)+\mathscr{C}_i^-(t)}$'
+        self.profits_bar_label = r'\frac{\mathcal{P}_i(t)}{\mathcal{C}_i^+(t)+\mathcal{C}_i^-(t)}$'
+        self.surplus_bar_label = r'\frac{\mathcal{E}_i(t)}{\mathcal{S}_i^+(t)+\mathcal{S}_i^-(t)}$'
 
         self.cmap = mpl.cm.get_cmap('jet')
         self.stocks_color = ListedColormap(sns.color_palette("PuBuGn_d", n_colors=100).as_hex())
@@ -71,7 +71,7 @@ class PlotlyDynamics:
             else:
                 self.firms = np.arange(self.dyn.n)
             self.color_firms = np.array([self.cmap(i / self.dyn.n) for i in range(self.dyn.n)])
-            self.gains, self.losses, self.supply, self.demand = self.dyn.compute_gains_losses_supply_demand(
+            self.gains, self.losses, self.supply, self.demand = self.dyn.compute_gains_losses_supplies_demand(
                 self.dyn.eco,
                 self.dyn.q_demand,
                 self.dyn.labour,
@@ -93,7 +93,7 @@ class PlotlyDynamics:
             self.dyn = dyn
             self.firms = np.random.choice(self.dyn.n, self.k, replace=False) if self.k else np.arange(self.dyn.n)
             self.color_firms = np.array([self.cmap(i / self.dyn.n) for i in range(self.dyn.n)])
-            self.gains, self.losses, self.supply, self.demand = self.dyn.compute_gains_losses_supply_demand(
+            self.gains, self.losses, self.supply, self.demand = self.dyn.compute_gains_losses_supplies_demand(
                 self.dyn.eco,
                 self.dyn.q_demand,
                 self.dyn.labour,
@@ -113,7 +113,7 @@ class PlotlyDynamics:
     def run_dyn(self):
         # self.dyn.set_initial_conditions(p0, w0, g0, t1, s0, B0)
         self.dyn.discrete_dynamics()
-        self.gains, self.losses, self.supply, self.demand = self.dyn.compute_gains_losses_supply_demand(
+        self.gains, self.losses, self.supply, self.demand = self.dyn.compute_gains_losses_supplies_demand(
             self.dyn.eco,
             self.dyn.q_demand,
             self.dyn.labour,
