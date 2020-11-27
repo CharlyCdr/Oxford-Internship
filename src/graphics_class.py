@@ -74,11 +74,11 @@ class PlotlyDynamics:
             self.gains, self.losses, self.supply, self.demand = self.dyn.compute_gains_losses_supplies_demand(
                 self.dyn.eco,
                 self.dyn.q_demand,
-                self.dyn.labour,
                 self.dyn.q_exchange,
                 self.dyn.prices,
                 self.dyn.prods,
-                self.dyn.stocks)
+                self.dyn.stocks,
+                self.dyn.labour)
             self.utility, self.budget = self.dyn.compute_utility_budget(self.dyn.eco,
                                                                         self.dyn.q_exchange,
                                                                         self.dyn.prices,
@@ -96,11 +96,11 @@ class PlotlyDynamics:
             self.gains, self.losses, self.supply, self.demand = self.dyn.compute_gains_losses_supplies_demand(
                 self.dyn.eco,
                 self.dyn.q_demand,
-                self.dyn.labour,
                 self.dyn.q_exchange,
                 self.dyn.prices,
                 self.dyn.prods,
-                self.dyn.stocks)
+                self.dyn.stocks,
+                self.dyn.labour)
             self.utility, self.budget = self.dyn.compute_utility_budget(self.dyn.eco,
                                                                         self.dyn.q_exchange,
                                                                         self.dyn.prices,
@@ -116,11 +116,11 @@ class PlotlyDynamics:
         self.gains, self.losses, self.supply, self.demand = self.dyn.compute_gains_losses_supplies_demand(
             self.dyn.eco,
             self.dyn.q_demand,
-            self.dyn.labour,
             self.dyn.q_exchange,
             self.dyn.prices,
             self.dyn.prods,
-            self.dyn.stocks)
+            self.dyn.stocks,
+            self.dyn.labour)
         self.utility, self.budget = self.dyn.compute_utility_budget(self.dyn.eco,
                                                                     self.dyn.q_exchange,
                                                                     self.dyn.prices,

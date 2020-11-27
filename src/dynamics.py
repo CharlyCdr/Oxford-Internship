@@ -412,7 +412,7 @@ class Dynamics(object):
         :param labour: time-series of labour supply.
         :return: Time-series of computed gains, losses, supplies and demands.
         """
-        demand = np.sum(q_demand, axis=1)
+        demands = np.sum(q_demand, axis=1)
         gains = np.zeros((len(prices), e.n))
         losses = np.zeros((len(prices), e.n))
         supplies = np.zeros((len(prices), e.n + 1))
@@ -420,7 +420,7 @@ class Dynamics(object):
             gains[i] = prices[i] * np.sum(q_exchange[i, :, 1:], axis=0)
             losses[i] = np.matmul(q_exchange[i, 1:, :], np.concatenate(([1], prices[i])))
             supplies[i] = np.concatenate(([labour[i]], e.firms.z * prods[i] + np.diag(stocks[i])))
-        return gains, losses, supplies, demand
+        return gains, losses, supplies, demands
 
     @staticmethod
     @jit
