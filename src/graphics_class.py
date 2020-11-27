@@ -31,12 +31,15 @@ class PlotlyDynamics:
 
         self.prices_label = r'$p_{i}(t)$'
         self.prods_label = r'$\gamma_{i}(t)$'
-        self.stocks_label = r'$s_{i}(t)$'
+        self.stocks_label = r'$I_{ii}(t)$'
 
         self.budget_label = r'$\tilde{B}(t)$'
         self.cons_label = r'$C_{i}(t)$'
         self.utility_label = r'$\mathcal{U}(t)$'
-        self.wage_label = r'$p_{0}(t)$'
+        self.wage_label = r'$\frac{p_{0}(t+1)}{p_0(t)}$'
+
+        self.profits_bar_label = r'\frac{\mathcal{P}_i(t)}{\mathscr{C}_i^+(t)+\mathscr{C}_i^-(t)}$'
+        self.surplus_bar_label = r'\frac{\mathcal{E}_i(t)}{\mathscr{C}_i^+(t)+\mathscr{C}_i^-(t)}$'
 
         self.cmap = mpl.cm.get_cmap('jet')
         self.stocks_color = ListedColormap(sns.color_palette("PuBuGn_d", n_colors=100).as_hex())
@@ -137,10 +140,10 @@ class PlotlyDynamics:
         fig.update_xaxes(title_text=r'$t$', row=2, col=1)
         fig.update_xaxes(title_text=r'$t$', row=2, col=2)
 
-        fig.update_yaxes(title_text=r'$C_{i}(t)$', row=1, col=1)
-        fig.update_yaxes(title_text=r'$B(t)$', row=2, col=1)
-        fig.update_yaxes(title_text=r'$\mathcal{U}(t)$', row=1, col=2)
-        fig.update_yaxes(title_text=r'$p_{0}(t)$', row=2, col=2)
+        fig.update_yaxes(title_text=self.cons_label, row=1, col=1)
+        fig.update_yaxes(title_text=self.budget_label, row=2, col=1)
+        fig.update_yaxes(title_text=self.utility_label, row=1, col=2)
+        fig.update_yaxes(title_text=self.wage_label, row=2, col=2)
         if from_eq:
             for firm in self.firms:
                 fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
@@ -368,8 +371,8 @@ class PlotlyDynamics:
         fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02
                             )
         fig.update_xaxes(title_text=r'$t$', row=2, col=1)
-        fig.update_yaxes(title_text=r'$\frac{e_{i}(t)}{S_{i}(t)+D_{i}(t)}$', showticksuffix='last', row=1, col=1)
-        fig.update_yaxes(title_text=r'$\frac{\mathcal{P}_{i}(t)}{C^{+}_{i}(t)+C^{-}_{i}(t)}$', row=2, col=1)
+        fig.update_yaxes(title_text=self.surplus_bar_label, showticksuffix='last', row=1, col=1)
+        fig.update_yaxes(title_text=self.profits_bar_label, row=2, col=1)
         fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max - 1),
                                  y=(self.supply[1:-1, 0] - self.demand[1:-1, 0]) / (
                                          self.supply[1:-1, 0] + self.demand[1:-1, 0])
