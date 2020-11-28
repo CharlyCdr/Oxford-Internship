@@ -38,8 +38,8 @@ class PlotlyDynamics:
         self.utility_label = r'$\mathcal{U}(t)$'
         self.wage_label = r'$\frac{p_{0}(t+1)}{p_0(t)}$'
 
-        self.profits_bar_label = r'\frac{\mathcal{P}_i(t)}{\mathcal{C}_i^+(t)+\mathcal{C}_i^-(t)}$'
-        self.surplus_bar_label = r'\frac{\mathcal{E}_i(t)}{\mathcal{S}_i^+(t)+\mathcal{S}_i^-(t)}$'
+        self.profits_bar_label = r'$\overline{\mathcal{P}_i}(t)$'
+        self.surplus_bar_label = r'$\overline{\mathcal{E}_i}(t)$'
 
         self.cmap = mpl.cm.get_cmap('jet')
         self.stocks_color = ListedColormap(sns.color_palette("PuBuGn_d", n_colors=100).as_hex())
