@@ -190,7 +190,7 @@ class Economy:
     def update_house_w_p(self, omega_p):
         self.house.update_w_p(omega_p)
 
-
+    # Setters for the networks and subsequent instances
 
     def set_j(self, j):
         """
@@ -257,20 +257,17 @@ class Economy:
     def set_eps_cal(self, eps):
         """
         Modifies firms instance to set smallest eigenvalue of economy matrix to given epsilon.
-        :param eps: a real number
-        :return: side effect
+        :param eps: a real number,
+        :return: side effect.
         """
         min_eig = self.get_eps_cal()
-        z_n, sigma, alpha, alpha_p, beta, beta_p, omega = self.firms.z * np.power(1 + (eps - min_eig) /
-                                                                                  np.power(self.firms.z,
-                                                                                           self.zeta),
-                                                                                  self.q + 1), \
-                                                          self.firms.sigma, \
-                                                          self.firms.alpha, \
-                                                          self.firms.alpha_p, \
-                                                          self.firms.beta, \
-                                                          self.firms.beta_p, \
-                                                          self.firms.omega
+        z_n = self.firms.z * np.power(1 + (eps - min_eig) / np.power(self.firms.z, self.zeta), self.q + 1)
+        sigma = self.firms.sigma
+        alpha = self.firms.alpha
+        alpha_p = self.firms.alpha_p
+        beta = self.firms.beta
+        beta_p = self.firms.beta_p
+        omega = self.firms.omega
         self.init_firms(z_n, sigma, alpha, alpha_p, beta, beta_p, omega)
         self.set_quantities()
         self.compute_eq()
@@ -309,28 +306,33 @@ class Economy:
         self.set_quantities()
         self.compute_eq()
 
-    def production_function(self, Q):
+    def production_function(self, q_available):
         """
-        CES production function
-        :param Q: if n firms, (n,n+1) matrix of available labour and goods for production
-        :return: productions of the n firms
+        CES production function.
+        :param q_available: matrix of available labour and goods for production,
+        :return: production levels of the firms.
         """
         if self.q == 0:
-            return np.power(np.nanmin(np.divide(Q, self.j_a),
+            return np.power(np.nanmin(np.divide(q_available, self.j_a),
                                       axis=1), self.b)
         elif self.q == np.inf:
-            return np.power(np.nanprod(np.power(np.divide(Q, self.j_a),
+            return np.power(np.nanprod(np.power(np.divide(q_available, self.j_a),
                                                 self.a_a),
                                        axis=1),
                             self.b)
         else:
             return np.power(np.nansum(self.a_a * np.power(self.j_a, 1. / self.q)
-                                      / np.power(Q, 1. / self.q), axis=1),
+                                      / np.power(q_available, 1. / self.q), axis=1),
                             - self.b * self.q)
 
     def compute_eq(self):
         """
-        :return: compute the competitive equilibrium of the economy
+        Computes the competitive equilibrium of the economy. We use least-squares to compute solutions of linear
+        systems Ax=b for memory and computational efficiency. The non-linear equations for non-constant return to scale
+        parameters are solved using generalized least-squares with initial guesses taken to be the solution of the b=1
+        linear equation. For a high number of firms, high heterogeneity of close to 0 epsilon, this function might
+        can output erroneous results or errors.
+        :return: side effect.
         """
         if self.q == np.inf:
             h = np.sum(self.a_a * np.log(np.ma.masked_invalid(np.divide(self.j_a, self.a_a))), axis=1)
@@ -376,13 +378,16 @@ class Economy:
                     self.p_eq, g = np.split(pg, 2)
                     self.g_eq = np.power(g, self.b)
 
-
                 else:
-                    init_guess_peq_zeta = lstsq(self.m_cal,
-                                                self.v,
-                                                rcond=None)[0]
+
+                    # The numerical solving is done for variables u = p_eq ^ zeta and
+                    # w = z ^ (q * zeta) * u ^ q * g_eq ^ (zeta * (bq+1) / b)
+
+                    init_guess_u = lstsq(self.m_cal,
+                                         self.v,
+                                         rcond=None)[0]
                     init_guess_w = lstsq(self.m_cal.T,
-                                         np.divide(self.house.kappa, init_guess_peq_zeta),
+                                         np.divide(self.house.kappa, init_guess_u),
                                          rcond=None)[0]
 
                     par = (np.power(self.firms.z, self.zeta),
@@ -394,14 +399,13 @@ class Economy:
                            )
 
                     uw = leastsq(lambda x: self.non_linear_eq_qnonzero(x, *par),
-                                 np.concatenate((init_guess_peq_zeta, init_guess_w)),
+                                 np.concatenate((init_guess_u, init_guess_w)),
                                  )[0]
 
                     # pylint: disable=unbalanced-tuple-unpacking
                     u, w = np.split(uw, 2)
-                    uq = np.power(u, self.q)
                     self.p_eq = np.power(u, 1. / self.zeta)
-                    self.g_eq = np.power(np.divide(w, np.power(self.firms.z, self.q * self.zeta) * uq),
+                    self.g_eq = np.power(np.divide(w, np.power(self.firms.z, self.q * self.zeta) * np.power(u, self.q)),
                                          self.b / (self.zeta * (self.b * self.q + 1)))
             else:
                 if self.q == 0:
@@ -412,14 +416,18 @@ class Economy:
                                       np.divide(self.house.kappa, self.p_eq),
                                       rcond=10e-7)[0]
                 else:
-                    peq_zeta = lstsq(self.m_cal,
-                                     self.v,
-                                     rcond=None)[0]
-                    self.p_eq = np.power(peq_zeta, 1. / self.zeta)
-                    w = lstsq(self.m_cal.T,
-                              np.divide(self.house.kappa, peq_zeta),
+
+                    # The numerical solving is done for variables u = p_eq ^ zeta and
+                    # w = z ^ (q * zeta) * u ^ q * g_eq
+
+                    u = lstsq(self.m_cal,
+                              self.v,
                               rcond=None)[0]
-                    self.g_eq = np.divide(w, np.power(self.firms.z, self.q * self.zeta) * np.power(peq_zeta, self.q))
+                    self.p_eq = np.power(u, 1. / self.zeta)
+                    w = lstsq(self.m_cal.T,
+                              np.divide(self.house.kappa, u),
+                              rcond=None)[0]
+                    self.g_eq = np.divide(w, np.power(self.firms.z, self.q * self.zeta) * np.power(u, self.q))
 
         self.mu_eq = np.power(self.house.thetabar * self.house.v_phi,
                               self.house.phi / (1 + self.house.phi))
@@ -429,11 +437,10 @@ class Economy:
 
     def save_eco(self, name):
         """
-        Saves the economy in multi-indexed dataframe in hdf format.
-        :param name: name of file.
-        :return: None
+        Saves the economy as multi-indexed data-frame in hdf format along with networks in npy format.
+        :param name: name of file,
         """
-        first_index = np.concatenate((['Firms' for k in range(11)], ['Household' for k in range(4)]))
+        first_index = np.concatenate((np.repeat('Firms', 11), np.repeat('Household', 11)))
         second_index = np.concatenate(
             (['q', 'b', 'z', 'sigma', 'alpha', 'alpha_p', 'beta', 'beta_p', 'w', 'p_eq', 'g_eq'],
              ['l', 'theta', 'gamma', 'phi']))
@@ -457,7 +464,7 @@ class Economy:
 
         df_eco = pd.DataFrame(values,
                               index=multi_index,
-                              columns=np.arange(1, self.n + 1)
+                              columns=[np.arange(1, self.n + 1)]
                               )
         df_eco.to_hdf(name + '/eco.h5', key='df', mode='w')
         np.save(name + '/network.npy', self.j_a)
