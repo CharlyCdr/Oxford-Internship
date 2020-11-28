@@ -154,7 +154,7 @@ class Firms:
         :return: Forecast of profits, balance, cash-flow and trade-flow.
         """
         exp_gain = prices * np.sum(q_forecast[:, 1:], axis=0)
-        exp_losses = np.matmul(q_forecast[1:, :], np.coqncatenate((np.array([1]), prices)))
+        exp_losses = np.matmul(q_forecast[1:, :], np.concatenate((np.array([1]), prices)))
         exp_supply = supply
         exp_demand = np.sum(q_forecast, axis=0)
         return exp_gain - exp_losses, exp_supply - exp_demand, exp_gain + exp_losses, exp_supply + exp_demand
