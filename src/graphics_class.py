@@ -1,25 +1,19 @@
-import matplotlib as mpl
+import matplotlib
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 import plotly.graph_objects as go
 import plotly.io as pio
-import seaborn as sns
 from community import community_louvain
 from matplotlib.colors import ListedColormap
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 from plotly.subplots import make_subplots
 
 import network
 
 pio.templates.default = "simple_white"
-mpl.rcParams['mathtext.fontset'] = 'stix'
-mpl.rcParams['font.family'] = 'serif'
-mpl.rcParams['font.serif'] = 'cm'
-mpl.use('Agg')
 
 
-def herfindal(v):
+def ipr(v):
     return np.sum(np.abs(v) ** 4)
 
 
@@ -27,8 +21,7 @@ class PlotlyDynamics:
 
     def __init__(self, dyn, k=None):
 
-        self.norm_cbar = mpl.colors.Normalize(vmin=0, vmax=1)
-
+        # Labels used for plots
         self.prices_label = r'$p_{i}(t)$'
         self.prods_label = r'$\gamma_{i}(t)$'
         self.stocks_label = r'$I_{ii}(t)$'
@@ -41,10 +34,11 @@ class PlotlyDynamics:
         self.profits_bar_label = r'$\overline{\mathcal{P}_i}(t)$'
         self.surplus_bar_label = r'$\overline{\mathcal{E}_i}(t)$'
 
-        self.cmap = mpl.cm.get_cmap('jet')
-        self.stocks_color = ListedColormap(sns.color_palette("PuBuGn_d", n_colors=100).as_hex())
-        self.cons_color = ListedColormap(sns.color_palette("Greens_d", n_colors=100).as_hex())
+        # Colormap for time-series
+        self.norm_cbar = matplotlib.colors.Normalize(vmin=0, vmax=1)
+        self.cmap = plt.get_cmap('jet')
 
+        # Figure instances
         self.fig_firms_funda = None
         self.fig_house = None
         self.fig_network_raw = None
@@ -52,16 +46,9 @@ class PlotlyDynamics:
         self.fig_firms_observ = None
         self.fig_exchanges = None
 
-        self.rc = {"text.usetex": True,
-                   "font.family": 'serif',
-                   "font.size": 12,
-                   "axes.grid": True,
-                   "grid.alpha": 0.5,
-                   "axes.xmargin": 0.025,
-                   "axes.ymargin": 0.05
-                   }
+        # Dynamics class from which to extract data to plot
         self.dyn = None
-        self.k = None
+        self.k = None  # Number of firms to plot
         self.firms = None
         if dyn:
             self.dyn = dyn
@@ -71,6 +58,8 @@ class PlotlyDynamics:
             else:
                 self.firms = np.arange(self.dyn.n)
             self.color_firms = np.array([self.cmap(i / self.dyn.n) for i in range(self.dyn.n)])
+
+            # Reconstructing gains, losses, supply, demand, utility, budget and extract diagonal stocks
             self.gains, self.losses, self.supply, self.demand = self.dyn.compute_gains_losses_supplies_demand(
                 self.dyn.eco,
                 self.dyn.q_demand,
@@ -88,6 +77,7 @@ class PlotlyDynamics:
                                                                         self.dyn.B0)
             self.diag_stocks = np.array([np.diag(stock) for stock in self.dyn.stocks])
 
+    # Setters methods
     def update_dyn(self, dyn):
         if dyn:
             self.dyn = dyn
@@ -135,6 +125,11 @@ class PlotlyDynamics:
         self.firms = np.random.choice(self.dyn.n, self.k, replace=False) if self.k else np.arange(self.dyn.n)
 
     def plotHouse(self, from_eq=False):
+        """
+        Generates a plot of time-series for utility, budget consumption and wage update factor.
+        :param from_eq: whether or not to remove equilibrium values from time-series, default is False.
+        :return: Side effect.
+        """
         fig = make_subplots(rows=2, cols=2, shared_xaxes=True, vertical_spacing=0.02
                             )
         fig.update_xaxes(title_text=r'$t$', row=2, col=1)
@@ -149,20 +144,14 @@ class PlotlyDynamics:
                 fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
                                          y=self.dyn.q_exchange[1:-1, 0, firm + 1] - self.dyn.eco.cons_eq[firm],
                                          mode='lines',
-                                         marker=dict(
-                                             color='rgba' + str(tuple(self.color_firms[firm])))
-                                         ),
+                                         marker=dict(color='rgba' + str(tuple(self.color_firms[firm])))),
                               row=1, col=1)
             fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                     y=self.utility[1:-1] - np.dot(self.dyn.eco.house.theta,
-                                                                   np.log(self.dyn.eco.cons_eq)) -
-                                       self.dyn.eco.house.gamma * np.power(
-                                         self.dyn.eco.labour_eq / self.dyn.eco.house.l_0, self.dyn.eco.house.phi + 1) / (
-                                               self.dyn.eco.house.phi + 1),
+                                     y=self.utility[1:-1] - self.dyn.eco.utility_eq,
                                      mode='lines'),
                           row=1, col=2)
             fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                     y=self.budget[1:-1],
+                                     y=self.budget[1:-1] - self.dyn.eco.b_eq,
                                      mode='lines'),
                           row=2, col=1)
             fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
@@ -202,13 +191,14 @@ class PlotlyDynamics:
         self.fig_house = fig
 
     def plotNetworkEigenvalues(self):
-
-        fig = make_subplots(rows=2, cols=2, column_widths=[0.7, 0.3], shared_xaxes=True, shared_yaxes=True,
-                            specs=[[{}, None],
-                                   [{}, {}]])
-
+        """
+        Generates a scatter plot of complex eigenvalues of the matrix M along with real and imaginary
+        part distributions. The color of the scatter marker represent the Inverse Participation Ratio of the associated
+        eigenvector.
+        :return: Side effect.
+        """
         w, v = np.linalg.eig(self.dyn.eco.m_cal)
-        colors = [herfindal(v[:, k]) for k in range(len(v))]
+        colors = [ipr(v[:, k]) for k in range(len(v))]
         eig_trace = go.Scattergl(x=w.real, y=w.imag, mode='markers', marker=dict(
             showscale=False,
             colorscale='Reds',
@@ -218,9 +208,9 @@ class PlotlyDynamics:
             line_width=2))
         eig_trace.marker.color = colors
         hist_real_trace = go.Histogram(x=w.real, histnorm='probability', nbinsx=50, xaxis="x",
-                                       yaxis="y3", marker_color='#c92b08')
+                                       yaxis="y3", marker={'color': '#c92b08'})
         hist_imag_trace = go.Histogram(y=w.imag, histnorm='probability', nbinsy=50, xaxis="x2",
-                                       yaxis="y", marker_color='#c92b08')
+                                       yaxis="y", marker={'color': '#c92b08'})
 
         data = [eig_trace, hist_imag_trace, hist_real_trace]
         layout = go.Layout(bargap=0,
@@ -285,6 +275,10 @@ class PlotlyDynamics:
         self.fig_network_eig = fig
 
     def plotNetwork(self):
+        """
+        Generates a plot of the network using the community layout.
+        :return: Side effect.
+        """
         edge_x = []
         edge_y = []
         edge_width = []
@@ -368,6 +362,10 @@ class PlotlyDynamics:
         self.fig_network_raw = fig
 
     def plotFirmsObserv(self):
+        """
+        Generates plot of time-series for rescale profits and production surplus.
+        :return: Side effect.
+        """
         fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02
                             )
         fig.update_xaxes(title_text=r'$t$', row=2, col=1)
@@ -375,81 +373,93 @@ class PlotlyDynamics:
         fig.update_yaxes(title_text=self.profits_bar_label, row=2, col=1)
         fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max - 1),
                                  y=(self.supply[1:-1, 0] - self.demand[1:-1, 0]) / (
-                                         self.supply[1:-1, 0] + self.demand[1:-1, 0])
-                                 ,
+                                         self.supply[1:-1, 0] + self.demand[1:-1, 0]),
                                  mode='lines',
-                                 line=dict(color='black', width=4, dash='dot')),
-                      row=1, col=1)
-        for l in self.firms:
+                                 line=dict(color='black', width=4, dash='dot'),
+                                 name='Labor',
+                                 showlegend=True),
+                      row=1,
+                      col=1)
+        for firm in self.firms:
             fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max - 1),
-                                     y=(self.supply[1:-1, l + 1] - self.demand[1:-1, l + 1]) / (
-                                             self.supply[1:-1, l + 1] + self.demand[1:-1, l + 1])
-                                     ,
+                                     y=(self.supply[1:-1, firm + 1] - self.demand[1:-1, firm + 1]) / (
+                                             self.supply[1:-1, firm + 1] + self.demand[1:-1, firm + 1]),
                                      mode='lines',
-                                     marker=dict(
-                                         color='rgba' + str(tuple(self.color_firms[l])))
-                                     ),
-                          row=1, col=1)
+                                     marker=dict(color='rgba' + str(tuple(self.color_firms[firm]))),
+                                     showlegend=False),
+                          row=1,
+                          col=1)
             fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max - 1),
-                                     y=(self.gains[1:-1, l] - self.losses[1:-1, l]) / (
-                                             self.gains[1:-1, l] + self.losses[1:-1, l]),
+                                     y=(self.gains[1:-1, firm] - self.losses[1:-1, firm]) / (
+                                             self.gains[1:-1, firm] + self.losses[1:-1, firm]),
                                      mode='lines',
-                                     marker=dict(
-                                         color='rgba' + str(tuple(self.color_firms[l])))
-                                     ),
-                          row=2, col=1)
-        fig.update_layout(showlegend=False)
-        fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
-        fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey', exponentformat="power", showexponent='last')
+                                     marker=dict(color='rgba' + str(tuple(self.color_firms[firm]))),
+                                     showlegend=False),
+                          row=2,
+                          col=1)
+        fig.update_layout(showlegend=True)
+        fig.update_xaxes(showgrid=True,
+                         gridwidth=1,
+                         gridcolor='LightGrey')
+        fig.update_yaxes(showgrid=True,
+                         gridwidth=1,
+                         gridcolor='LightGrey',
+                         exponentformat="power",
+                         showexponent='last')
         self.fig_firms_observ = fig
 
     def plotFirms(self, from_eq=None):
+        """
+        Generates plot of time-series for prices, production levels and diagonal stocks.
+        :param from_eq: whether or not to remove equilibrium values from time-series, default is False.
+        :return: Side effect.
+        """
         fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.02
                             )
         fig.update_xaxes(title_text=r'$t$', row=3, col=1)
         fig.update_yaxes(title_text=r'$p_{i}(t)$', row=1, col=1)
         fig.update_yaxes(title_text=r'$\gamma_{i}(t)$', row=2, col=1)
         fig.update_yaxes(title_text=r'$s_{i}(t)$', row=3, col=1)
-        for l in self.firms:
+        for firm in self.firms:
             if from_eq:
                 fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                         y=self.dyn.prices[1:, l] - self.dyn.eco.p_eq[l],
+                                         y=self.dyn.prices[1:, firm] - self.dyn.eco.p_eq[firm],
                                          mode='lines',
                                          marker=dict(
-                                             color='rgba' + str(tuple(self.color_firms[l])))),
+                                             color='rgba' + str(tuple(self.color_firms[firm])))),
                               row=1, col=1)
                 fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                         y=self.dyn.prods[1:, l] - self.dyn.eco.g_eq[l],
+                                         y=self.dyn.prods[1:, firm] - self.dyn.eco.g_eq[firm],
                                          mode='lines',
                                          marker=dict(
-                                             color='rgba' + str(tuple(self.color_firms[l])))),
+                                             color='rgba' + str(tuple(self.color_firms[firm])))),
                               row=2, col=1)
                 fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                         y=self.diag_stocks[1:, l],
+                                         y=self.diag_stocks[1:, firm],
                                          mode='lines',
                                          marker=dict(
-                                             color='rgba' + str(tuple(self.color_firms[l])))),
+                                             color='rgba' + str(tuple(self.color_firms[firm])))),
                               row=3, col=1)
             else:
                 fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                         y=self.dyn.prices[1:, l],
+                                         y=self.dyn.prices[1:, firm],
                                          mode='lines',
                                          marker=dict(
-                                             color='rgba' + str(tuple(self.color_firms[l])))
+                                             color='rgba' + str(tuple(self.color_firms[firm])))
                                          ),
                               row=1, col=1)
                 fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                         y=self.dyn.prods[1:, l],
+                                         y=self.dyn.prods[1:, firm],
                                          mode='lines',
                                          marker=dict(
-                                             color='rgba' + str(tuple(self.color_firms[l])))
+                                             color='rgba' + str(tuple(self.color_firms[firm])))
                                          ),
                               row=2, col=1)
                 fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
-                                         y=self.diag_stocks[1:, l],
+                                         y=self.diag_stocks[1:, firm],
                                          mode='lines',
                                          marker=dict(
-                                             color='rgba' + str(tuple(self.color_firms[l])))
+                                             color='rgba' + str(tuple(self.color_firms[firm])))
                                          ),
                               row=3, col=1)
         fig.update_layout(showlegend=False)
@@ -458,21 +468,24 @@ class PlotlyDynamics:
         self.fig_firms_funda = fig
 
     def plotExchanges(self):
+        """
+        Generates an animated heat-map plot for the exchanged foods across time.
+        :return: side effect.
+        """
         fig_dict = {
-            "data": [dict(type='heatmapgl',
-                          x=np.arange(1, self.dyn.n + 1),
-                          y=np.arange(1, self.dyn.n + 1),
-                          z=self.dyn.Q_real[1, 1:, 1:],
-                          zmin=0,
-                          colorbar=dict(thickness=20, ticklen=4))],
-            "layout": {'width': 700, 'height': 700},
-            "frames": [dict(data=[dict(type='heatmapgl',
-                                       z=self.dyn.Q_real[time, 1:, 1:],
-                                       )
-                                  ],
-                            name=str(time),
+            "data": dict(type='heatmapgl',
+                         x=np.arange(1, self.dyn.n + 1),
+                         y=np.arange(1, self.dyn.n + 1),
+                         z=self.dyn.q_exchange[1, 1:, 1:],
+                         zmin=0,
+                         colorbar=dict(thickness=20, ticklen=4)),
+            "layout": dict(width=700,
+                           height=700),
+            "frames": [dict(data=dict(type='heatmapgl',
+                                      z=self.dyn.Q_real[time, 1:, 1:]),
+                            name=str(time)
                             )
-                       for time in range(1, len(self.dyn.Q_real))]
+                       for time in range(1, len(self.dyn.q_exchange))]
         }
         sliders_dict = {"active": 0,
                         "yanchor": "top",
@@ -495,7 +508,7 @@ class PlotlyDynamics:
                                              "transition": {"duration": 0}}
                                             ],
                                    "label": str(time),
-                                   "method": "animate"} for time in range(1, len(self.dyn.Q_real))]
+                                   "method": "animate"} for time in range(1, len(self.dyn.q_exchange))]
                         }
 
         fig_dict["layout"]["sliders"] = [sliders_dict]
