@@ -157,7 +157,7 @@ class PlotlyDynamics:
                                      y=self.utility[1:-1] - np.dot(self.dyn.eco.house.theta,
                                                                    np.log(self.dyn.eco.cons_eq)) -
                                        self.dyn.eco.house.gamma * np.power(
-                                         self.dyn.eco.labour_eq / self.dyn.eco.house.l, self.dyn.eco.house.phi + 1) / (
+                                         self.dyn.eco.labour_eq / self.dyn.eco.house.l_0, self.dyn.eco.house.phi + 1) / (
                                                self.dyn.eco.house.phi + 1),
                                      mode='lines'),
                           row=1, col=2)

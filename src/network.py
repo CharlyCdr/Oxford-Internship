@@ -1,8 +1,6 @@
 import networkx as nx
 import numpy as np
 
-from exception import InputError
-
 
 def undir_rrg(d, n):
     return np.array(nx.convert_matrix.to_numpy_array(nx.random_regular_graph(d, n)))
@@ -63,7 +61,7 @@ def create_net(net_str, directed, n, d):
         elif net_str == 'er':
             return er(n, d/n)
         else:
-            raise InputError("Not coded yet")
+            raise Exception("Not coded yet")
 
 def community_layout(g, partition):
     """

@@ -449,7 +449,7 @@ class Economy:
                             self.firms.w * np.ones(self.n),
                             self.p_eq,
                             self.g_eq,
-                            self.house.l * np.ones(self.n),
+                            self.house.l_0 * np.ones(self.n),
                             self.house.theta,
                             self.house.gamma * np.ones(self.n),
                             self.house.phi * np.ones(self.n),
