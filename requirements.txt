@@ -1,0 +1,8 @@
+numpy
+scipy
+matplotlib
+plotly
+pandas
+python-louvain
+networkx
+numba
