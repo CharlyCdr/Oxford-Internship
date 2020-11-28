@@ -4,7 +4,7 @@ The ``economy`` module
 
 This module declares the Economy class which encapsulates everything static in the model.
 This class has the network attributes (both input-output and substitution) along with subsequent quantities
-(equilibrium etc). It also enhirits firms and households attributes.
+(equilibrium etc). It also inherits firms and households attributes.
 """
 import warnings
 
