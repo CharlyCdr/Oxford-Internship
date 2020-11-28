@@ -417,9 +417,9 @@ class PlotlyDynamics:
         fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.02
                             )
         fig.update_xaxes(title_text=r'$t$', row=3, col=1)
-        fig.update_yaxes(title_text=r'$p_{i}(t)$', row=1, col=1)
-        fig.update_yaxes(title_text=r'$\gamma_{i}(t)$', row=2, col=1)
-        fig.update_yaxes(title_text=r'$s_{i}(t)$', row=3, col=1)
+        fig.update_yaxes(title_text=self.prices_label, row=1, col=1)
+        fig.update_yaxes(title_text=self.prods_label, row=2, col=1)
+        fig.update_yaxes(title_text=self.stocks_label, row=3, col=1)
         for firm in self.firms:
             if from_eq:
                 fig.add_trace(go.Scatter(x=np.arange(self.dyn.t_max),
