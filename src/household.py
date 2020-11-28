@@ -1,14 +1,25 @@
+# network-economy is a simulation program for the Network Economy ABM desbribed in (TODO)
+# Copyright (C) 2020 Théo Dessertaine
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 """
 The ``household`` module
 ======================
 
 This module declares the Household class which model one representative household.
-The attributes of this class are all the fixed parameters defining the household:
-l_0: quantity of labour for phi --> infinity,
-theta: preferences for goods,
-gamma: aversion to labour parameter,
-phi: work-desutility convexity parameter,
-omega_p: instantaneous log-elasticity for confidence effects.
+The attributes of this class are all the fixed parameters defining the household.
 """
 import numpy as np
 

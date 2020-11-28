@@ -1,16 +1,25 @@
+# network-economy is a simulation program for the Network Economy ABM desbribed in (TODO)
+# Copyright (C) 2020 Théo Dessertaine
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 """
 The ``firms`` module
 ======================
 
 This module declares the Firms class which model n firms.
-The attributes of this class are all the fixed parameters defining firms
-z : productivity factors
-sigma: depreciation of stocks parameter
-alpha,
-alpha_p,
-beta,
-beta_p,
-omega : inverse time-scales for feed-backs.
+The attributes of this class are all the fixed parameters defining firms.
 The methods of this class encode the way firms update the varying quantities such as prices, productions etc...
 """
 
