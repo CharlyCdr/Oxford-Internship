@@ -6,7 +6,11 @@ This module declares the Firms class which model n firms.
 The attributes of this class are all the fixed parameters defining firms
 z : productivity factors
 sigma: depreciation of stocks parameter
-alpha, alpha_p, beta, beta_p, omega : inverse time-scales for feed-backs.
+alpha,
+alpha_p,
+beta,
+beta_p,
+omega : inverse time-scales for feed-backs.
 The methods of this class encode the way firms update the varying quantities such as prices, productions etc...
 """
 
@@ -66,7 +70,8 @@ class Firms:
         :param step_s: size of time step,
         :return: Updated prices for the next period.
         """
-        return prices * np.exp(- step_s * (self.alpha_p * profits / cashflow + self.alpha * balance[1:] / tradeflow[1:]))
+        return prices * np.exp(- step_s * (self.alpha_p * profits / cashflow +
+                                           self.alpha * balance[1:] / tradeflow[1:]))
 
     def update_wages(self, labour_balance, total_labour, step_s):
         """

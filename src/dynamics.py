@@ -442,7 +442,7 @@ class Dynamics(object):
         for i in range(1, int((t_max + 1) / step_s) - 1):
             utility[i] = np.power(rescaling_factors[i + 1], e.house.omega_p / e.firms.omega) * \
                          np.dot(e.house.theta, q_exchange[i, 0, 1:]) - \
-                         np.power(np.sum(q_exchange[i, 1:, 0]) / e.house.l, 1 + e.house.phi) * e.house.gamma / (
+                         np.power(np.sum(q_exchange[i, 1:, 0]) / e.house.l_0, 1 + e.house.phi) * e.house.gamma / (
                                  1 + e.house.phi)
             budget[i] = budget[i - 1] - np.dot(prices[i - 1], q_exchange[i - 1, 0, 1:]) + np.sum(q_exchange[i, 1:, 0])
         return utility, budget
