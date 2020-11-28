@@ -22,50 +22,6 @@ warnings.simplefilter("ignore")
 
 class Economy:
 
-    # Fixed point equations for equilibrium computation
-
-    @staticmethod
-    def non_linear_eq_qnonzero(x, *p):
-        """
-        Function used for computation of equilibrium with non constant return to scale
-        and general CES production function.
-        :param x: guess for equilibrium
-        :param p: tuple z, z_zeta, v, m_cal, zeta, q, theta, theta_bar, power
-        :return: function's value at x
-        """
-        if len(x) % 2 != 0:
-            raise ValueError("x must be of even length")
-
-        # pylint: disable=unbalanced-tuple-unpacking
-        u, w = np.split(x, 2)
-        z_zeta, v, m_cal, q, exponent, kappa = p
-        w_over_uq_p = np.power(np.divide(w, np.power(z_zeta, q) * np.power(u, q)), exponent)
-        v1 = np.multiply(z_zeta, np.multiply(u, 1 - w_over_uq_p))
-        m1 = np.dot(m_cal, u)
-        m2 = u * np.dot(m_cal.T, w) - w * m1
-        return np.concatenate((m1 - v1 - v, m2 + w * v - kappa))
-
-    @staticmethod
-    def non_linear_eq_qzero(x, *par):
-        """
-        Function used for computation of equilibrium with non constant return to scale
-        and Leontieff production function.
-        :param x: guess for equilibrium
-        :param par: tuple z_zeta, v, m_cal, q power
-        :return: function's value at x
-        """
-
-        if len(x) % 2 != 0:
-            raise ValueError('x must be of even length')
-
-        # pylint: disable=unbalanced-tuple-unpacking
-        p, g = np.split(x, 2)
-        z, v, m_cal, exponent, kappa = par
-        v1 = np.multiply(z, np.multiply(p, 1 - np.power(g, exponent)))
-        m1 = np.dot(m_cal, p)
-        m2 = g * m1 - p * np.dot(m_cal.T, g)
-        return np.concatenate((m1 - v1 - v, m2 - g * v + kappa))
-
     def __init__(self, n, d, netstring, directed, j0, a0, q, b):
 
         # Network initialization
@@ -470,3 +426,47 @@ class Economy:
         np.save(name + '/network.npy', self.j_a)
         if self.q != 0:
             np.save(name + '/sub_network.npy', self.a_a)
+
+    # Fixed point equations for equilibrium computation
+
+    @staticmethod
+    def non_linear_eq_qnonzero(x, *p):
+        """
+        Function used for computation of equilibrium with non constant return to scale
+        and general CES production function.
+        :param x: guess for equilibrium
+        :param p: tuple z, z_zeta, v, m_cal, zeta, q, theta, theta_bar, power
+        :return: function's value at x
+        """
+        if len(x) % 2 != 0:
+            raise ValueError("x must be of even length")
+
+        # pylint: disable=unbalanced-tuple-unpacking
+        u, w = np.split(x, 2)
+        z_zeta, v, m_cal, q, exponent, kappa = p
+        w_over_uq_p = np.power(np.divide(w, np.power(z_zeta, q) * np.power(u, q)), exponent)
+        v1 = np.multiply(z_zeta, np.multiply(u, 1 - w_over_uq_p))
+        m1 = np.dot(m_cal, u)
+        m2 = u * np.dot(m_cal.T, w) - w * m1
+        return np.concatenate((m1 - v1 - v, m2 + w * v - kappa))
+
+    @staticmethod
+    def non_linear_eq_qzero(x, *par):
+        """
+        Function used for computation of equilibrium with non constant return to scale
+        and Leontieff production function.
+        :param x: guess for equilibrium
+        :param par: tuple z_zeta, v, m_cal, q power
+        :return: function's value at x
+        """
+
+        if len(x) % 2 != 0:
+            raise ValueError('x must be of even length')
+
+        # pylint: disable=unbalanced-tuple-unpacking
+        p, g = np.split(x, 2)
+        z, v, m_cal, exponent, kappa = par
+        v1 = np.multiply(z, np.multiply(p, 1 - np.power(g, exponent)))
+        m1 = np.dot(m_cal, p)
+        m2 = g * m1 - p * np.dot(m_cal.T, g)
+        return np.concatenate((m1 - v1 - v, m2 - g * v + kappa))
