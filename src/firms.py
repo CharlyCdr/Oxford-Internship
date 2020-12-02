@@ -79,10 +79,10 @@ class Firms:
         :param step_s: size of time step,
         :return: Updated prices for the next period.
         """
-        return prices * np.exp(- step_s * (self.alpha_p * profits / cashflow +
+        return prices * np.exp(- 2 * step_s * (self.alpha_p * profits / cashflow +
                                            self.alpha * balance[1:] / tradeflow[1:]))
 
-    def update_wages(self, labour_balance, total_labour, step_s):
+    def update_wages(self, labour_balance, total_labour, profits_res, gamma, step_s):
         """
         Updates wages according to the observed tensions in the labour market.
         :param labour_balance: labour supply - labour demand,
@@ -90,7 +90,9 @@ class Firms:
         :param step_s: size of time-step,
         :return: Updated wage for the next period.
         """
-        return np.exp(- self.omega * step_s * labour_balance / total_labour)
+        mean_res_prof = np.mean(profits_res[profits_res > 0])
+        mean = gamma * step_s * mean_res_prof if not np.isnan(mean_res_prof) else 0
+        return np.exp(- 2 * self.omega * step_s * (labour_balance / total_labour) + mean)
 
     def compute_targets(self, prices, q_forecast, supply, prods, step_s):
         """
@@ -103,7 +105,7 @@ class Firms:
         :return: Production targets for the next period.
         """
         est_profits, est_balance, est_cashflow, est_tradeflow = self.compute_forecasts(prices, q_forecast, supply)
-        return prods * np.exp(step_s * (self.beta * est_profits / est_cashflow
+        return prods * np.exp(2 * step_s * (self.beta * est_profits / est_cashflow
                               - self.beta_p * est_balance[1:] / est_tradeflow[1:]))
 
     @staticmethod
