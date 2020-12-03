@@ -280,7 +280,7 @@ class Dynamics(object):
                                                              self.step_s
                                                              )
 
-    def discrete_dynamics(self, gamma):
+    def discrete_dynamics(self):
         """
         Main function to run the dynamics of the Network Economy ABM.
         :return: Side-effect
@@ -317,13 +317,13 @@ class Dynamics(object):
             0)
 
         # Carrying on with Exchanges & Trades and Production with every needed quantities known.
-        self.exchanges_and_updates(1, gamma)
+        self.exchanges_and_updates(1)
         self.production(1)
         # End of first time-step
         t = 2
         while t < int((self.t_max + 1) / self.step_s - 1):
             self.planning(t)
-            self.exchanges_and_updates(t, gamma)
+            self.exchanges_and_updates(t)
             self.production(t)
             t += 1
 
