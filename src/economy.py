@@ -60,6 +60,7 @@ class Economy:
         self.lamb_a = None
         self.m_cal = None
         self.v = None
+        self.kappa = None
         self.zeros_j_a = None
 
         # Firms and household sub-classes
@@ -75,29 +76,31 @@ class Economy:
         self.b_eq = None
         self.utility_eq = None
 
-    def init_house(self, l_0, theta, gamma, phi, omega_p=None):
+    def init_house(self, l_0, theta, gamma, phi, omega_p=None, f=None, r=None):
         """
         Initialize a household object as instance of economy class. Refer to household class.
-        :param l_0:
-        :param theta:
-        :param gamma:
-        :param phi:
-        :param omega_p:
-        :return: Initialize household class with given parameters.
+        :param l_0: baseline work offer,
+        :param theta: preferency factors,
+        :param gamma: aversion to work parameter,
+        :param phi: Frisch index,
+        :param omega_p: confidence parameter
+        :param f: fraction of budget to save,
+        :param r: savings growth rate.
+        :return: Initializes household class with given parameters.
         """
-        self.house = Household(l_0, theta, gamma, phi, omega_p)
+        self.house = Household(l_0, theta, gamma, phi, omega_p, f, r)
 
     def init_firms(self, z, sigma, alpha, alpha_p, beta, beta_p, omega):
         """
         Initialize a firms object as instance of economy class. Refer to firms class.
-        :param z:
-        :param sigma:
-        :param alpha:
-        :param alpha_p:
-        :param beta:
-        :param beta_p:
-        :param omega:
-        :return: Initialize firms class with given parameters.
+        :param z: Productivity factors,
+        :param sigma: Depreciation of stocks parameters,
+        :param alpha: Log-elasticity of prices' growth rates against surplus,
+        :param alpha_p: Log-elasticity of prices' growth rates against profits,
+        :param beta: Log-elasticity of productions' growth rates against profits,
+        :param beta_p: Log-elasticity of productions' growth rates against surplus,
+        :param omega: Log-elasticity of wages' growth rates against labor-market tensions.
+        :return: Initializes firms class with given parameters.
         """
         self.firms = Firms(z, sigma, alpha, alpha_p, beta, beta_p, omega)
 
@@ -163,6 +166,12 @@ class Economy:
     def update_house_w_p(self, omega_p):
         self.house.update_w_p(omega_p)
 
+    def update_house_f(self, f):
+        self.house.update_f(f)
+
+    def update_house_r(self, r):
+        self.house.update_r(r)
+
     # Setters for the networks and subsequent instances
 
     def set_j(self, j):
@@ -218,6 +227,11 @@ class Economy:
                                       np.power(self.j_a, self.zeta))
             self.m_cal = np.diag(np.power(self.firms.z, self.zeta)) - self.lamb
             self.v = np.array(self.lamb_a[:, 0])
+        self.mu_eq = np.power(np.power(self.house.gamma, 1./self.house.phi) * np.sum(self.house.theta) *
+                              (1 - (1 - self.house.f) * (1 + self.house.r)) /
+                              (self.house.f * np.power(self.house.l_0, 1 + 1./self.house.phi)),
+                              self.house.phi / (1 + self.house.phi))
+        self.kappa = self.house.theta / self.mu_eq
         self.zeros_j_a = self.j_a != 0
 
     def get_eps_cal(self):
@@ -310,7 +324,7 @@ class Economy:
         if self.q == np.inf:
             h = np.sum(self.a_a * np.log(np.ma.masked_invalid(np.divide(self.j_a, self.a_a))), axis=1)
             v = lstsq(np.eye(self.n) - self.a.T,
-                      self.house.kappa,
+                      self.kappa,
                       rcond=10e-7)[0]
             log_p = lstsq(np.eye(self.n) / self.b - self.a,
                           - np.log(self.firms.z) / self.b + (1 - self.b) * np.log(v) / self.b + h,
@@ -324,19 +338,19 @@ class Economy:
                                            self.v,
                                            rcond=10e-7)[0]
                     init_guess_geq = lstsq(self.m_cal.T,
-                                           np.divide(self.house.kappa, init_guess_peq),
+                                           np.divide(self.kappa, init_guess_peq),
                                            rcond=10e-7)[0]
 
                     par = (self.firms.z,
                            self.v,
                            self.m_cal,
                            self.b - 1,
-                           self.house.kappa)
+                           self.kappa)
 
                     pert_peq = lstsq(self.m_cal, self.firms.z * init_guess_peq * np.log(init_guess_geq), rcond=10e-7)[0]
 
                     pert_geq = lstsq(np.transpose(self.m_cal),
-                                     - np.divide(self.house.kappa,
+                                     - np.divide(self.kappa,
                                                  np.power(init_guess_peq, 2)) * pert_peq +
                                      self.firms.z * init_guess_geq * np.log(init_guess_geq),
                                      rcond=10e-7)[0]
@@ -360,7 +374,7 @@ class Economy:
                                          self.v,
                                          rcond=None)[0]
                     init_guess_w = lstsq(self.m_cal.T,
-                                         np.divide(self.house.kappa, init_guess_u),
+                                         np.divide(self.kappa, init_guess_u),
                                          rcond=None)[0]
 
                     par = (np.power(self.firms.z, self.zeta),
@@ -368,7 +382,7 @@ class Economy:
                            self.m_cal,
                            self.q,
                            (self.b - 1) / (self.b * self.q + 1),
-                           self.house.kappa
+                           self.kappa
                            )
 
                     uw = leastsq(lambda x: self.non_linear_eq_qnonzero(x, *par),
@@ -386,7 +400,7 @@ class Economy:
                                       self.v,
                                       rcond=10e-7)[0]
                     self.g_eq = lstsq(self.m_cal.T,
-                                      np.divide(self.house.kappa, self.p_eq),
+                                      np.divide(self.kappa, self.p_eq),
                                       rcond=10e-7)[0]
                 else:
 
@@ -398,14 +412,12 @@ class Economy:
                               rcond=None)[0]
                     self.p_eq = np.power(u, 1. / self.zeta)
                     w = lstsq(self.m_cal.T,
-                              np.divide(self.house.kappa, u),
+                              np.divide(self.kappa, u),
                               rcond=None)[0]
                     self.g_eq = np.divide(w, np.power(self.firms.z, self.q * self.zeta) * np.power(u, self.q))
 
-        self.mu_eq = np.power(np.sum(self.house.theta) * self.house.v_phi,
-                              self.house.phi / (1 + self.house.phi))
-        self.labour_eq = np.power(self.mu_eq, 1. / self.house.phi) / self.house.v_phi
-        self.cons_eq = self.house.theta / (self.mu_eq * self.p_eq)
+        self.labour_eq = np.power(self.mu_eq * self.house.f, 1. / self.house.phi) / self.house.v_phi
+        self.cons_eq = self.kappa / self.p_eq
         self.b_eq = np.sum(self.house.theta) / self.mu_eq
         self.utility_eq = np.dot(self.house.theta, np.log(self.cons_eq)) - self.house.gamma * np.power(
             self.labour_eq / self.house.l_0,

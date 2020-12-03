@@ -215,7 +215,7 @@ class Dynamics(object):
                                               np.diag(np.minimum(self.supply[1:] / self.demand[1:], 1))
                                               )
 
-        self.q_exchange[t, 0, 1:] = self.q_exchange[t, 0, 1:] * np.minimum(1, self.budget / (
+        self.q_exchange[t, 0, 1:] = self.q_exchange[t, 0, 1:] * np.minimum(1, self.eco.house.f * self.budget / (
             np.dot(self.q_exchange[t, 0, 1:], self.prices[t])))
 
         self.savings = self.budget - np.dot(self.prices[t], self.q_exchange[t, 0, 1:])
@@ -267,7 +267,7 @@ class Dynamics(object):
         # (3) Price rescaling
         self.prices[t + 1] = self.prices[t + 1] / self.wages[t + 1]
         self.budget = self.budget / self.wages[t + 1]
-        self.savings = np.maximum(self.savings, 0) / self.wages[t + 1]
+        self.savings = (1 + self.eco.house.r) * np.maximum(self.savings, 0) / self.wages[t + 1]
         # Clipping to avoid negative almost zero values
 
         # The household performs its optimization to set its consumption target and its labour supply for the next
@@ -280,7 +280,7 @@ class Dynamics(object):
                                                              self.step_s
                                                              )
 
-    def discrete_dynamics(self):
+    def discrete_dynamics(self, gamma):
         """
         Main function to run the dynamics of the Network Economy ABM.
         :return: Side-effect
@@ -317,13 +317,13 @@ class Dynamics(object):
             0)
 
         # Carrying on with Exchanges & Trades and Production with every needed quantities known.
-        self.exchanges_and_updates(1)
+        self.exchanges_and_updates(1, gamma)
         self.production(1)
         # End of first time-step
         t = 2
         while t < int((self.t_max + 1) / self.step_s - 1):
             self.planning(t)
-            self.exchanges_and_updates(t)
+            self.exchanges_and_updates(t, gamma)
             self.production(t)
             t += 1
 

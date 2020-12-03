@@ -37,13 +37,13 @@ class Firms:
             raise Exception("Depreciation of stocks must be positive.")
 
         # Production function parameters
-        self.z = z
-        self.sigma = sigma
-        self.alpha = alpha
-        self.alpha_p = alpha_p
-        self.beta = beta
-        self.beta_p = beta_p
-        self.omega = omega
+        self.z = z  # Productivity factors
+        self.sigma = sigma  # Depreciation of stocks parameters
+        self.alpha = alpha  # Log-elasticity of prices' growth rates against surplus
+        self.alpha_p = alpha_p  # Log-elasticity of prices' growth rates against profits
+        self.beta = beta  # Log-elasticity of productions' growth rates against profits
+        self.beta_p = beta_p  # Log-elasticity of productions' growth rates against surplus
+        self.omega = omega  # Log-elasticity of wages' growth rates against labor-market tensions
 
     # Setters for class instances
 
@@ -82,7 +82,7 @@ class Firms:
         return prices * np.exp(- 2 * step_s * (self.alpha_p * profits / cashflow +
                                            self.alpha * balance[1:] / tradeflow[1:]))
 
-    def update_wages(self, labour_balance, total_labour, profits_res, gamma, step_s):
+    def update_wages(self, labour_balance, total_labour, step_s):
         """
         Updates wages according to the observed tensions in the labour market.
         :param labour_balance: labour supply - labour demand,
@@ -90,9 +90,7 @@ class Firms:
         :param step_s: size of time-step,
         :return: Updated wage for the next period.
         """
-        mean_res_prof = np.mean(profits_res[profits_res > 0])
-        mean = gamma * step_s * mean_res_prof if not np.isnan(mean_res_prof) else 0
-        return np.exp(- 2 * self.omega * step_s * (labour_balance / total_labour) + mean)
+        return np.exp(- 2 * self.omega * step_s * (labour_balance / total_labour))
 
     def compute_targets(self, prices, q_forecast, supply, prods, step_s):
         """

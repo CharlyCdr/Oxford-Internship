@@ -22,51 +22,50 @@ This module declares the Household class which model one representative househol
 The attributes of this class are all the fixed parameters defining the household.
 """
 import numpy as np
+from scipy.optimize import fsolve
 
 
 class Household(object):
 
-    def __init__(self, l_0, theta, gamma, phi, omega_p=None):
+    def __init__(self, l_0, theta, gamma, phi, omega_p=None, f=None, r=None):
         # Primary instances
-        self.l_0 = l_0
-        self.theta = theta
-        self.gamma = gamma
-        self.phi = phi
-        self.omega_p = omega_p if omega_p else 0
+        self.l_0 = l_0  # Baseline work offer
+        self.theta = theta  # Preferency factors
+        self.gamma = gamma  # Aversion to work parameter
+        self.phi = phi  # Frisch index
+        self.omega_p = omega_p if omega_p else 0  # Confidence parameter
+        self.f = f if f else 1  # Fraction of budget to use for consumption
+        self.r = r if r else 0  # Savings growth rate
 
-        # Secondary instances
+        # Secondary instance
         self.v_phi = np.power(self.gamma, 1. / self.phi) / np.power(self.l_0, 1 + 1. / self.phi)
-        self.kappa = self.theta / np.power(np.sum(self.theta) * self.v_phi,
-                                           self.phi / (1 + self.phi))
 
     # Setters for class instances
 
     def update_labour(self, labour):
         self.l_0 = labour
         self.v_phi = np.power(self.gamma, 1. / self.phi) / np.power(labour, 1 + 1. / self.phi)
-        self.kappa = self.theta / np.power(np.sum(self.theta) * self.v_phi,
-                                           self.phi / (1 + self.phi))
 
     def update_theta(self, theta):
         self.theta = theta
         self.v_phi = np.power(self.gamma, 1. / self.phi) / np.power(self.l_0, 1 + 1. / self.phi)
-        self.kappa = self.theta / np.power(np.sum(self.theta) * self.v_phi,
-                                           self.phi / (1 + self.phi))
 
     def update_gamma(self, gamma):
         self.gamma = gamma
         self.v_phi = np.power(self.gamma, 1. / self.phi) / np.power(self.l_0, 1 + 1. / self.phi)
-        self.kappa = self.theta / np.power(np.sum(self.theta) * self.v_phi,
-                                           self.phi / (1 + self.phi))
 
     def update_phi(self, phi):
         self.phi = phi
         self.v_phi = np.power(self.gamma, 1. / self.phi) / np.power(self.l_0, 1 + 1. / self.phi)
-        self.kappa = self.theta / np.power(np.sum(self.theta) * self.v_phi,
-                                           self.phi / (1 + self.phi))
 
     def update_w_p(self, omega_p):
         self.omega_p = omega_p
+
+    def update_f(self, f):
+        self.f = f
+
+    def update_r(self, r):
+        self.r = r
 
     def utility(self, consumption, working_hours):
         """
@@ -97,18 +96,17 @@ class Household(object):
         if self.phi == 1:
             mu = .5 * (np.sqrt(np.power(savings * self.v_phi, 2)
                                + 4 * self.v_phi * np.sum(theta))
-                       - savings * self.v_phi)
+                       - savings * self.v_phi) / self.f
         elif self.phi == np.inf:
-            mu = np.sum(theta) / (self.l_0 + savings)
+            mu = np.sum(theta) / (self.l_0 + savings) / self.f
         else:
-            # (TODO)
-            raise Exception('Not coded yet')
-            # x0 = np.power(self.thetabar * self.v_phi, self.phi / (1 + self.phi)) / 2.
-            # mu = fsolve(self.fixed_point_mu, x0, args=(self.thetabar, self.v_phi, self.phi, budget))
+            mu = fsolve(self.fixed_point_mu,
+                        np.power(np.sum(theta) * self.v_phi, self.phi / (1 + self.phi)) / 2.,
+                        args=(np.sum(theta), self.v_phi, self.phi, self.f, savings))
 
-        return theta / (mu * prices), np.power(mu, 1. / self.phi) / self.v_phi
+        return theta / (mu * prices), np.power(mu * self.f, 1. / self.phi) / self.v_phi
 
     @staticmethod
     def fixed_point_mu(x, p):
-        thetabar, vphi, phi, budget = p
-        return (thetabar * vphi - np.power(x, 1. + 1 / phi)) / (budget * vphi) - x
+        thetabar, vphi, phi, f, savings = p
+        return np.power(x * f, 1+1./phi) / vphi + savings * x * f - thetabar
