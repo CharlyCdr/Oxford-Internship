@@ -1,2 +1,0 @@
-# Oxford-Internship
-Internship repository.
