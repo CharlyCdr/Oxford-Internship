@@ -102,8 +102,8 @@ class Household(object):
         else:
             mu = fsolve(self.fixed_point_mu,
                         np.power(np.sum(theta) * self.v_phi, self.phi / (1 + self.phi)) / 2.,
-                        args=(np.sum(theta), self.v_phi, self.phi, self.f, savings))
-
+                        args=([np.sum(theta), self.v_phi, self.phi, self.f, savings]))
+            
         return theta / (mu * prices), np.power(mu * self.f, 1. / self.phi) / self.v_phi
 
     @staticmethod

@@ -35,7 +35,6 @@ from network import create_net
 
 warnings.simplefilter("ignore")
 
-
 class Economy:
 
     def __init__(self, n, d, netstring, directed, j0, a0, q, b):
@@ -373,6 +372,7 @@ class Economy:
                     init_guess_u = lstsq(self.m_cal,
                                          self.v,
                                          rcond=None)[0]
+
                     init_guess_w = lstsq(self.m_cal.T,
                                          np.divide(self.kappa, init_guess_u),
                                          rcond=None)[0]

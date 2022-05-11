@@ -83,25 +83,25 @@ class Dynamics(object):
         """
         if t_max:
             self.t_max = t_max
-        self.prices = np.zeros((int((self.t_max + 1) / self.step_s), self.n))
-        self.prices_non_res = np.zeros((int((self.t_max + 1) / self.step_s), self.n))
-        self.wages = np.zeros(int((self.t_max + 1) / self.step_s))
-        self.prods = np.zeros((int((self.t_max + 1) / self.step_s), self.n))
-        self.targets = np.zeros((int((self.t_max + 1) / self.step_s), self.n))
-        self.stocks = np.zeros((int((self.t_max + 1) / self.step_s), self.n, self.n))
-        self.gains = np.zeros(self.n)
-        self.losses = np.zeros(self.n)
-        self.supply = np.zeros(self.n + 1)
-        self.demand = np.zeros(self.n + 1)
-        self.tradereal = np.zeros(self.n + 1)
-        self.q_exchange = np.zeros((int((self.t_max + 1) / self.step_s), self.n + 1, self.n + 1))
-        self.q_demand = np.zeros((int((self.t_max + 1) / self.step_s), self.n + 1, self.n + 1))
-        self.q_opt = np.zeros((self.n, self.n + 1))
-        self.q_prod = np.zeros((self.n, self.n + 1))
-        self.q_used = np.zeros((self.n, self.n + 1))
+        self.prices = np.zeros(self.prices.shape)
+        self.prices_non_res = np.zeros(self.prices_non_res.shape)
+        self.wages = np.zeros(self.wages.shape)
+        self.prods = np.zeros(self.prods.shape)
+        self.targets = np.zeros(self.targets.shape)
+        self.stocks = np.zeros(self.stocks.shape)
+        self.gains = np.zeros(self.gains.shape)
+        self.losses = np.zeros(self.losses.shape)
+        self.supply = np.zeros(self.supply.shape)
+        self.demand = np.zeros(self.demand.shape)
+        self.tradereal = np.zeros(self.tradereal.shape)
+        self.q_exchange = np.zeros(self.q_exchange.shape)
+        self.q_demand = np.zeros(self.q_demand.shape)
+        self.q_opt = np.zeros(self.q_opt.shape)
+        self.q_prod = np.zeros(self.q_prod.shape)
+        self.q_used = np.zeros(self.q_used.shape)
         self.budget = 0
         self.savings = 0
-        self.labour = np.zeros(int((self.t_max + 1) / self.step_s))
+        self.labour = np.zeros(self.labour.shape)
 
     # Setters for simulation parameters
 
@@ -115,6 +115,9 @@ class Dynamics(object):
         self.clear_all(self.t_max)
         self.run_with_current_ic = False
 
+    def update_lambda(self, lda):
+        self.lda = lda
+        self.run_with_current_ic = False
     # Setters for the economy
 
     def update_eco(self, e):
@@ -202,7 +205,7 @@ class Dynamics(object):
         self.q_exchange[t, 1:, 0] = self.q_demand[t, 1:, 0] * np.minimum(1, self.labour[t] / np.sum(
             self.q_demand[t, 1:, 0]))
 
-        self.budget = self.savings + np.sum(self.q_exchange[t, 1:, 0])
+        self.budget = self.savings + np.sum(self.q_exchange[t, 1:, 0]) # Why no p0
 
         self.q_demand[t, 0, 1:] = self.q_demand[t, 0, 1:] * (self.nu + (1 - self.nu) *
                                                              np.minimum(1, self.budget /
@@ -230,10 +233,13 @@ class Dynamics(object):
         self.losses = np.matmul(self.q_exchange[t, 1:, :], np.concatenate(([1], self.prices[t])))
 
         # (3) Prices and Wage updates
+        #print('####### Step '+str(t)+' #######')
+        #print("SUPPLY", "NaN: ", np.isnan(self.supply).sum(), "inf: ", np.isinf(self.supply).sum())
+        #print("DEMAND", "NaN: ", np.isnan(self.demand).sum(), "inf: ", np.isinf(self.demand).sum())
         self.wages[t + 1] = self.eco.firms.update_wages(self.supply[0] - self.demand[0],
                                                         self.supply[0] + self.demand[0],
                                                         self.step_s)
-
+        #print("WAGES", "NaN: ", np.isnan(self.wages[t + 1]).sum(), "inf: ", np.isinf(self.wages[t + 1]).sum())
         self.prices[t + 1] = self.eco.firms.update_prices(self.prices[t],
                                                           self.gains - self.losses,
                                                           self.supply - self.demand,
@@ -241,6 +247,7 @@ class Dynamics(object):
                                                           self.supply + self.demand,
                                                           self.step_s
                                                           )
+        #print("PRICES", "NaN: ", np.isnan(self.prices[t + 1]).sum(), "inf: ", np.isinf(self.prices[t + 1]).sum())
 
     def production(self, t):
         """
@@ -359,7 +366,7 @@ class Dynamics(object):
     @staticmethod
     def fisher_test(data):
         """
-        Perform a Fisher test on data-frame to determine if iy oscillates.
+        Perform a Fisher test on data-frame to determine if it oscillates.
         References: Ahdesmäki M, Lähdesmäki H, Pearson R, Huttunen H, Yli-Harja O.
                     Robust detection of periodic time series measured from biological systems.
                     BMC Bioinformatics. 2005;6:117. Published 2005 May 13. doi:10.1186/1471-2105-6-117

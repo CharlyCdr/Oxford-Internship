@@ -36,7 +36,6 @@ import network
 
 pio.templates.default = "simple_white"
 
-
 def ipr(v):
     return np.sum(np.abs(v) ** 4)
 
